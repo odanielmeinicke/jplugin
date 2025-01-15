@@ -106,6 +106,10 @@ final class PluginInfoImpl implements PluginInfo {
     }
     @Override
     public void close() throws PluginInterruptException {
+        if (!isRunning()) {
+            return;
+        }
+
         state = State.STOPPING;
 
         try {

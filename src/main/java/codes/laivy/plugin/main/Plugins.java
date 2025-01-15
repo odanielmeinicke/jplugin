@@ -92,6 +92,17 @@ public final class Plugins {
         initialize(Thread.currentThread().getContextClassLoader(), packge.getName(), recurring);
     }
 
+    public static void interrupt(@NotNull ClassLoader loader) throws PluginInterruptException {
+        @NotNull List<PluginInfo> plugins = new LinkedList<>(organize(Plugins.plugins));
+        Collections.reverse(plugins);
+
+        for (@NotNull PluginInfo info : plugins) {
+            // todo: check dependants
+            if (info.getReference().getClassLoader().equals(loader)) {
+                info.close();
+            }
+        }
+    }
     @ApiStatus.Experimental
     public static void initialize(@NotNull ClassLoader loader) throws PluginInitializeException, IOException {
         // Variables
