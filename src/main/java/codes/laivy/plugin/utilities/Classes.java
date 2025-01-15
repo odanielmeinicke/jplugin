@@ -2,16 +2,22 @@ package codes.laivy.plugin.utilities;
 
 import codes.laivy.plugin.annotation.Plugin;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Opcodes;
 
 import java.io.*;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLDecoder;
 import java.nio.file.Files;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -105,6 +111,39 @@ public final class Classes {
         }
 
         return byteArrayOutputStream.toByteArray();
+    }
+
+    public static @NotNull Map<@NotNull String, @NotNull URL> read(@NotNull ClassLoader loader, @NotNull URL url) throws IOException {
+        @NotNull Map<@NotNull String, @NotNull URL> map = new LinkedHashMap<>();
+        @NotNull String protocol = url.getProtocol();
+
+        if ("file".equals(protocol)) {
+            @NotNull Map<String, URL> temp = new LinkedHashMap<>();
+            @NotNull File directory = new File(URLDecoder.decode(url.getPath(), "UTF-8"));
+
+            if (directory.isDirectory()) listFiles(directory, temp);
+
+            for (@NotNull Entry<@NotNull String, @NotNull URL> entry : temp.entrySet()) try {
+                map.put(entry.getKey().substring(url.toURI().getPath().length() - 1), entry.getValue());
+            } catch (@NotNull URISyntaxException e) {
+                throw new RuntimeException("cannot generate uri from url: " + url, e);
+            }
+        }
+
+        return map;
+    }
+    private static void listFiles(@NotNull File directory, @NotNull Map<@NotNull String, @NotNull URL> map) throws IOException {
+        @NotNull File @Nullable [] files = directory.listFiles();
+
+        if (files != null) {
+            for (@NotNull File file : files) {
+                if (file.isDirectory()) {
+                    listFiles(file, map);
+                } else if (file.getName().endsWith(".class")) {
+                    map.put(file.getPath(), file.toURI().toURL());
+                }
+            }
+        }
     }
 
     // Object
