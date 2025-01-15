@@ -88,8 +88,52 @@ public final class PluginInfo {
     public static void initialize(@NotNull Package packge, boolean recurring) throws PluginInitializeException, IOException {
         initialize(Thread.currentThread().getContextClassLoader(), packge.getName(), recurring);
     }
-    public static void initialize(@NotNull ClassLoader loader) throws PluginInitializeException, IOException {
 
+    @ApiStatus.Experimental
+    public static void initialize(@NotNull ClassLoader loader) throws PluginInitializeException, IOException {
+        // Variables
+        @NotNull Map<@NotNull Class<?>, @NotNull Collection<Class<?>>> references = new HashMap<>();
+
+        // Retrieve classes
+        @NotNull Enumeration<@NotNull URL> enumeration = loader.getResources("");
+        @NotNull Map<@NotNull String, @NotNull URL> files = new LinkedHashMap<>();
+
+        while (enumeration.hasMoreElements()) {
+            @NotNull URL url = enumeration.nextElement();
+            files.putAll(Classes.read(loader, url));
+        }
+
+        // Load plugins
+        for (@NotNull Entry<@NotNull String, @NotNull URL> entry : files.entrySet()) {
+            // Variables
+            @NotNull String name = entry.getKey()
+                    .replace(".class", "")
+                    .replace(File.separator, ".");
+            @NotNull URL url = entry.getValue();
+
+            // Retrieve references
+            @NotNull Class<?> reference;
+
+            try {
+                reference = Class.forName(name);
+            } catch (@NotNull ClassNotFoundException e) {
+                continue;
+            }
+
+            if (reference.isAnnotationPresent(Plugin.class)) {
+                // Resolve dependencies
+                @NotNull List<Class<?>> dependencies = new LinkedList<>();
+
+                for (@NotNull Dependency dependency : reference.getAnnotationsByType(Dependency.class)) {
+                    dependencies.add(dependency.type());
+                }
+
+                references.put(reference, dependencies);
+            }
+        }
+
+        // Finish
+        load(references);
     }
 
     @ApiStatus.Experimental
@@ -188,8 +232,8 @@ public final class PluginInfo {
             @NotNull Iterator<PluginInfo> iterator = remaining.iterator();
 
             while (iterator.hasNext()) {
-                PluginInfo plugin = iterator.next();
-                List<PluginInfo> dependencies = Arrays.asList(plugin.getDependencies());
+                @NotNull PluginInfo plugin = iterator.next();
+                @NotNull List<PluginInfo> dependencies = Arrays.asList(plugin.getDependencies());
 
                 if (dependencies.isEmpty() || sorted.containsAll(dependencies)) {
                     sorted.add(plugin);
@@ -200,7 +244,7 @@ public final class PluginInfo {
         } while (progress);
 
         if (!remaining.isEmpty()) {
-            throw new IllegalStateException("Cyclic or unresolved dependencies detected: " + remaining);
+            throw new IllegalStateException("cyclic or unresolved dependencies detected: " + remaining);
         }
 
         return sorted;
