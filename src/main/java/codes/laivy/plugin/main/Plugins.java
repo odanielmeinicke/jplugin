@@ -1,12 +1,10 @@
 package codes.laivy.plugin.main;
 
 import codes.laivy.plugin.PluginInfo;
-import codes.laivy.plugin.PluginMain;
 import codes.laivy.plugin.annotation.Dependency;
 import codes.laivy.plugin.annotation.Plugin;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
-import codes.laivy.plugin.utilities.Classes;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -41,13 +39,25 @@ public final class Plugins {
     public static @NotNull PluginInfo retrieve(@NotNull String name) {
         return plugins.stream().filter(plugin -> Objects.equals(plugin.getName(), name)).findFirst().orElseThrow(() -> new IllegalArgumentException("there's no plugin with name '" + name + "'"));
     }
-    
-    public static void initialize(@NotNull ClassLoader loader, @NotNull String packge, boolean recurring) throws PluginInitializeException, IOException {
+
+    public static void interrupt(@NotNull ClassLoader loader, @NotNull String packge, boolean recursive) throws PluginInterruptException {
+        @NotNull List<PluginInfo> plugins = new LinkedList<>(organize(Plugins.plugins));
+        Collections.reverse(plugins);
+
+        for (@NotNull PluginInfo info : plugins) {
+            if (info.getReference().getClassLoader().equals(loader) && !isPackageWithin(packge, info.getReference().getPackage().getName(), recursive)) {
+                continue;
+            }
+
+            info.close();
+        }
+    }
+    public static void initialize(@NotNull ClassLoader loader, @NotNull String packge, boolean recursive) throws PluginInitializeException, IOException {
         // Variables
         @NotNull Map<@NotNull Class<?>, @NotNull Collection<Class<?>>> references = new HashMap<>();
 
         // Retrieve all plugins
-        @NotNull Enumeration<URL> enumeration = PluginMain.class.getClassLoader().getResources(packge.replace(".", File.separator));
+        @NotNull Enumeration<URL> enumeration = loader.getResources(packge.replace(".", File.separator));
 
         while (enumeration.hasMoreElements()) {
             @NotNull URL url = enumeration.nextElement();
@@ -82,14 +92,26 @@ public final class Plugins {
         // Load
         load(references);
     }
-    public static void initialize(@NotNull String packge, boolean recurring) throws PluginInitializeException, IOException {
-        initialize(Thread.currentThread().getContextClassLoader(), packge, recurring);
+
+    public static void interrupt(@NotNull String packge, boolean recursive) throws PluginInterruptException {
+        interrupt(Thread.currentThread().getContextClassLoader(), packge, recursive);
     }
-    public static void initialize(@NotNull ClassLoader loader, @NotNull Package packge, boolean recurring) throws PluginInitializeException, IOException {
-        initialize(loader, packge.getName(), recurring);
+    public static void initialize(@NotNull String packge, boolean recursive) throws PluginInitializeException, IOException {
+        initialize(Thread.currentThread().getContextClassLoader(), packge, recursive);
     }
-    public static void initialize(@NotNull Package packge, boolean recurring) throws PluginInitializeException, IOException {
-        initialize(Thread.currentThread().getContextClassLoader(), packge.getName(), recurring);
+
+    public static void interrupt(@NotNull ClassLoader loader, @NotNull Package packge, boolean recursive) throws PluginInterruptException {
+        interrupt(loader, packge.getName(), recursive);
+    }
+    public static void initialize(@NotNull ClassLoader loader, @NotNull Package packge, boolean recursive) throws PluginInitializeException, IOException {
+        initialize(loader, packge.getName(), recursive);
+    }
+
+    public static void interrupt(@NotNull Package packge, boolean recursive) throws PluginInterruptException {
+        interrupt(Thread.currentThread().getContextClassLoader(), packge.getName(), recursive);
+    }
+    public static void initialize(@NotNull Package packge, boolean recursive) throws PluginInitializeException, IOException {
+        initialize(Thread.currentThread().getContextClassLoader(), packge.getName(), recursive);
     }
 
     public static void interrupt(@NotNull ClassLoader loader) throws PluginInterruptException {
@@ -298,7 +320,7 @@ public final class Plugins {
         try {
             @NotNull Method define = ClassLoader.class.getDeclaredMethod("defineClass", byte[].class, int.class, int.class);
             define.setAccessible(true);
-            return (Class<?>) define.invoke(PluginMain.class.getClassLoader(), bytes, 0, bytes.length);
+            return (Class<?>) define.invoke(Plugins.class.getClassLoader(), bytes, 0, bytes.length);
         } catch (@NotNull NoSuchMethodException e) {
             throw new RuntimeException("cannot find ClassLoader's #defineClass(byte[], int, int) method", e);
         } catch (@NotNull IllegalAccessException e) {
@@ -323,8 +345,7 @@ public final class Plugins {
 
         return bool.get();
     }
-    // todo: made this not public
-    public static byte[] toByteArray(@NotNull InputStream input) throws IOException {
+    private static byte[] toByteArray(@NotNull InputStream input) throws IOException {
         @NotNull ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         byte[] data = new byte[2048];
 
@@ -335,5 +356,12 @@ public final class Plugins {
 
         return buffer.toByteArray();
     }
-
+    private static boolean isPackageWithin(@NotNull String one, @NotNull String two, boolean recursive) {
+        if (recursive) {
+            return two.startsWith(one);
+        } else {
+            return two.equals(one);
+        }
+    }
+    
 }
