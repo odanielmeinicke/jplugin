@@ -1,4 +1,4 @@
-package codes.laivy.plugin.utilities;
+package codes.laivy.plugin.main;
 
 import codes.laivy.plugin.annotation.Plugin;
 import org.jetbrains.annotations.NotNull;
@@ -22,9 +22,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-public final class Classes {
+final class Classes {
 
     // Static initializers
+
+    public static boolean isPackageWithin(@NotNull String one, @NotNull String two, boolean recursive) {
+        if (recursive) {
+            return two.startsWith(one);
+        } else {
+            return two.equals(one);
+        }
+    }
 
     public static boolean hasPluginType(byte[] bytecode) {
         @NotNull String interfaceName = Plugin.class.getName().replace('.', '/');
