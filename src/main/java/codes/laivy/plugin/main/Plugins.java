@@ -3,25 +3,20 @@ package codes.laivy.plugin.main;
 import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.annotation.Dependency;
 import codes.laivy.plugin.annotation.Plugin;
+import codes.laivy.plugin.exception.InvalidPluginException;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.Opcodes;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 public final class Plugins {
 
@@ -31,21 +26,21 @@ public final class Plugins {
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
     }
 
-    static final @NotNull Set<PluginInfo> plugins = new LinkedHashSet<>();
+    static final @NotNull Map<Class<?>, PluginInfoImpl> plugins = new LinkedHashMap<>();
 
     public static @NotNull PluginInfo retrieve(@NotNull Class<?> reference) {
-        return plugins.stream().filter(plugin -> plugin.getReference().equals(reference)).findFirst().orElseThrow(() -> new IllegalArgumentException("the class '" + reference.getName() + "' isn't a plugin"));
+        return plugins.values().stream().filter(plugin -> plugin.getReference().equals(reference)).findFirst().orElseThrow(() -> new IllegalArgumentException("the class '" + reference.getName() + "' isn't a plugin"));
     }
     public static @NotNull PluginInfo retrieve(@NotNull String name) {
-        return plugins.stream().filter(plugin -> Objects.equals(plugin.getName(), name)).findFirst().orElseThrow(() -> new IllegalArgumentException("there's no plugin with name '" + name + "'"));
+        return plugins.values().stream().filter(plugin -> Objects.equals(plugin.getName(), name)).findFirst().orElseThrow(() -> new IllegalArgumentException("there's no plugin with name '" + name + "'"));
     }
 
     public static void interrupt(@NotNull ClassLoader loader, @NotNull String packge, boolean recursive) throws PluginInterruptException {
-        @NotNull List<PluginInfo> plugins = new LinkedList<>(organize(Plugins.plugins));
+        @NotNull List<PluginInfo> plugins = new LinkedList<>(organize(Plugins.plugins.values()));
         Collections.reverse(plugins);
 
         for (@NotNull PluginInfo info : plugins) {
-            if (info.getReference().getClassLoader().equals(loader) && !isPackageWithin(packge, info.getReference().getPackage().getName(), recursive)) {
+            if (info.getReference().getClassLoader().equals(loader) && !Classes.isPackageWithin(packge, info.getReference().getPackage().getName(), recursive)) {
                 continue;
             }
 
@@ -54,7 +49,7 @@ public final class Plugins {
     }
     public static void initialize(@NotNull ClassLoader loader, @NotNull String packge, boolean recursive) throws PluginInitializeException, IOException {
         // Variables
-        @NotNull Map<@NotNull Class<?>, @NotNull Collection<Class<?>>> references = new HashMap<>();
+        @NotNull Set<@NotNull Class<?>> references = new LinkedHashSet<>();
 
         // Retrieve all plugins
         @NotNull Enumeration<URL> enumeration = loader.getResources(packge.replace(".", File.separator));
@@ -62,7 +57,7 @@ public final class Plugins {
         while (enumeration.hasMoreElements()) {
             @NotNull URL url = enumeration.nextElement();
 
-            for (@NotNull String path : new String(toByteArray(url.openStream())).split("\n")) {
+            for (@NotNull String path : new String(Classes.toByteArray(url.openStream())).split("\n")) {
                 if (!path.endsWith(".class")) {
                     continue;
                 }
@@ -77,14 +72,8 @@ public final class Plugins {
                 }
 
                 if (reference.isAnnotationPresent(Plugin.class)) {
-                    // Resolve dependencies
-                    @NotNull List<Class<?>> dependencies = new LinkedList<>();
-
-                    for (@NotNull Dependency dependency : reference.getAnnotationsByType(Dependency.class)) {
-                        dependencies.add(dependency.type());
-                    }
-
-                    references.put(reference, dependencies);
+                    // Add plugin to references, and load it later.
+                    references.add(reference);
                 }
             }
         }
@@ -115,12 +104,13 @@ public final class Plugins {
     }
 
     public static void interrupt(@NotNull ClassLoader loader) throws PluginInterruptException {
-        @NotNull List<PluginInfo> plugins = new LinkedList<>(organize(Plugins.plugins));
+        @NotNull List<PluginInfo> plugins = new LinkedList<>(organize(Plugins.plugins.values()));
         Collections.reverse(plugins);
 
         for (@NotNull PluginInfo info : plugins) {
-            // todo: check dependants
-            if (info.getReference().getClassLoader().equals(loader)) {
+            @NotNull Class<?> reference = info.getReference();
+
+            if (reference.getClassLoader().equals(loader)) {
                 info.close();
             }
         }
@@ -128,7 +118,7 @@ public final class Plugins {
     @ApiStatus.Experimental
     public static void initialize(@NotNull ClassLoader loader) throws PluginInitializeException, IOException {
         // Variables
-        @NotNull Map<@NotNull Class<?>, @NotNull Collection<Class<?>>> references = new HashMap<>();
+        @NotNull Set<@NotNull Class<?>> references = new LinkedHashSet<>();
 
         // Retrieve classes
         @NotNull Enumeration<@NotNull URL> enumeration = loader.getResources("");
@@ -156,15 +146,9 @@ public final class Plugins {
                 continue;
             }
 
+            // Add plugin to references, and load it later.
             if (reference.isAnnotationPresent(Plugin.class)) {
-                // Resolve dependencies
-                @NotNull List<Class<?>> dependencies = new LinkedList<>();
-
-                for (@NotNull Dependency dependency : reference.getAnnotationsByType(Dependency.class)) {
-                    dependencies.add(dependency.type());
-                }
-
-                references.put(reference, dependencies);
+                references.add(reference);
             }
         }
 
@@ -175,7 +159,7 @@ public final class Plugins {
     @ApiStatus.Experimental
     public static void initializeAll() throws PluginInitializeException, IOException {
         // Variables
-        @NotNull Map<@NotNull Class<?>, @NotNull Collection<Class<?>>> references = new HashMap<>();
+        @NotNull Set<@NotNull Class<?>> references = new LinkedHashSet<>();
 
         // Retrieve all plugins
         for (@NotNull Map.Entry<@NotNull String, @NotNull InputStream> entry : Classes.getAllPluginTypeClasses().entrySet()) {
@@ -190,25 +174,18 @@ public final class Plugins {
                 reference = Class.forName(name);
             } catch (@NotNull ClassNotFoundException ignore) {
                 // Define class
-                reference = define(toByteArray(stream));
+                reference = Classes.define(Classes.toByteArray(stream));
             }
 
-            // Resolve dependencies
-            @NotNull List<Class<?>> dependencies = new LinkedList<>();
-
-            for (@NotNull Dependency dependency : reference.getAnnotationsByType(Dependency.class)) {
-                dependencies.add(dependency.type());
-            }
-
-            // Initialize plugin
-            references.put(reference, dependencies);
+            // Add plugin to references, and load it later.
+            references.add(reference);
         }
 
         // Load references
         load(references);
     }
     public static void interruptAll() throws PluginInterruptException {
-        @NotNull List<PluginInfo> plugins = new LinkedList<>(organize(Plugins.plugins));
+        @NotNull List<PluginInfo> plugins = new LinkedList<>(organize(Plugins.plugins.values()));
         Collections.reverse(plugins);
 
         for (@NotNull PluginInfo info : plugins) {
@@ -216,33 +193,39 @@ public final class Plugins {
         }
     }
 
-    private static void load(@NotNull Map<@NotNull Class<?>, @NotNull Collection<Class<?>>> references) throws PluginInitializeException {
+    private static void load(@NotNull Collection<@NotNull Class<?>> references) throws PluginInitializeException {
         // Create instances
-        @NotNull Map<@NotNull Class<?>, @NotNull PluginInfo> plugins = new LinkedHashMap<>();
+        @NotNull Map<@NotNull Class<?>, @NotNull PluginInfoImpl> plugins = new LinkedHashMap<>();
 
-        for (@NotNull Map.Entry<@NotNull Class<?>, @NotNull Collection<Class<?>>> entry : references.entrySet()) {
-            @NotNull Class<?> reference = entry.getKey();
-            @NotNull List<Class<?>> dependencies = new LinkedList<>();
+        for (@NotNull Class<?> reference : references) {
+            // Check if it's an inner and non-static class
+            if (reference.getEnclosingClass() != null && !Modifier.isStatic(reference.getModifiers())) {
+                throw new InvalidPluginException(reference, "a non-static inner class cannot be a plugin, the class should be atleast static");
+            }
 
             // Dependencies
-            for (@NotNull Class<?> plugin : entry.getValue()) {
+            @NotNull Set<Class<?>> dependencies = new LinkedHashSet<>();
+
+            for (@NotNull Dependency annotation : reference.getAnnotationsByType(Dependency.class)) {
+                @NotNull Class<?> dependency = annotation.type();
+
                 // Check issues
-                if (!references.containsKey(plugin)) {
-                    throw new PluginInitializeException(reference, "the dependency '" + plugin.getName() + "' is not a plugin");
-                } else if (plugin == reference) {
-                    throw new PluginInitializeException(reference, "the reference cannot have a dependency on itself");
+                if (!Plugins.plugins.containsKey(dependency)) {
+                    throw new InvalidPluginException(reference, "there's a dependency that is not a plugin at '" + reference.getName() + "': " + dependency.getName());
+                } else if (dependency == reference) {
+                    throw new InvalidPluginException(reference, "the plugin cannot have a dependency on itself");
                 }
 
                 // Generate instance
-                dependencies.add(plugin);
+                dependencies.add(dependency);
             }
 
             // Name
             @Nullable String name = reference.getAnnotation(Plugin.class).name();
             if (name != null && name.isEmpty()) name = null;
 
-            // Create instance
-            @NotNull PluginInfo plugin = new PluginInfoImpl(name, reference, dependencies.toArray(new Class[0]));
+            // Create instance and register it
+            @NotNull PluginInfoImpl plugin = new PluginInfoImpl(name, reference, dependencies.toArray(new Class[0]));
             plugins.put(reference, plugin);
         }
 
@@ -256,8 +239,14 @@ public final class Plugins {
                 throw new PluginInitializeException(plugin.getReference(), "cannot initialize plugin correctly", throwable);
             }
         }
+
+        // Add dependencies
+        for (@NotNull PluginInfoImpl plugin : plugins.values()) {
+            @NotNull List<@NotNull PluginInfoImpl> dependants = plugins.values().stream().filter(target -> target.getDependencies().contains(plugin)).collect(Collectors.toList());
+            plugin.dependants.addAll(dependants);
+        }
     }
-    private static @NotNull Set<PluginInfo> organize(@NotNull Collection<@NotNull PluginInfo> plugins) {
+    private static @NotNull Set<PluginInfo> organize(@NotNull Collection<@NotNull PluginInfoImpl> plugins) {
         @NotNull Set<PluginInfo> sorted = new LinkedHashSet<>();
         @NotNull List<PluginInfo> remaining = new ArrayList<>(plugins);
 
@@ -268,7 +257,7 @@ public final class Plugins {
 
             while (iterator.hasNext()) {
                 @NotNull PluginInfo plugin = iterator.next();
-                @NotNull List<PluginInfo> dependencies = Arrays.asList(plugin.getDependencies());
+                @NotNull Collection<PluginInfo> dependencies = plugin.getDependencies();
 
                 if (dependencies.isEmpty() || sorted.containsAll(dependencies)) {
                     sorted.add(plugin);
@@ -312,56 +301,6 @@ public final class Plugins {
             }
         }
 
-    }
-
-    // Utilities
-
-    private static @NotNull Class<?> define(byte[] bytes) {
-        try {
-            @NotNull Method define = ClassLoader.class.getDeclaredMethod("defineClass", byte[].class, int.class, int.class);
-            define.setAccessible(true);
-            return (Class<?>) define.invoke(Plugins.class.getClassLoader(), bytes, 0, bytes.length);
-        } catch (@NotNull NoSuchMethodException e) {
-            throw new RuntimeException("cannot find ClassLoader's #defineClass(byte[], int, int) method", e);
-        } catch (@NotNull IllegalAccessException e) {
-            throw new RuntimeException("cannot access ClassLoader's #defineClass(byte[], int, int) method", e);
-        } catch (@NotNull InvocationTargetException e) {
-            throw new RuntimeException("cannot invoke ClassLoader's #defineClass(byte[], int, int) method", e);
-        }
-    }
-    private static boolean hasPluginType(byte[] bytecode) {
-        @NotNull String interfaceName = codes.laivy.plugin.annotation.Plugin.class.getName().replace('.', '/');
-        @NotNull AtomicBoolean bool = new AtomicBoolean(false);
-        @NotNull ClassReader classReader = new ClassReader(bytecode);
-        classReader.accept(new ClassVisitor(Opcodes.ASM9) {
-            @Override
-            public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-                if (descriptor.contains(interfaceName)) {
-                    bool.set(true);
-                }
-                return super.visitAnnotation(descriptor, visible);
-            }
-        }, 0);
-
-        return bool.get();
-    }
-    private static byte[] toByteArray(@NotNull InputStream input) throws IOException {
-        @NotNull ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        byte[] data = new byte[2048];
-
-        int bytesRead;
-        while ((bytesRead = input.read(data)) != -1) {
-            buffer.write(data, 0, bytesRead);
-        }
-
-        return buffer.toByteArray();
-    }
-    private static boolean isPackageWithin(@NotNull String one, @NotNull String two, boolean recursive) {
-        if (recursive) {
-            return two.startsWith(one);
-        } else {
-            return two.equals(one);
-        }
     }
     
 }
