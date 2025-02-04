@@ -5,20 +5,24 @@ import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
-// todo: non-static inner classes cannot be a plugin
 final class PluginInfoImpl implements PluginInfo {
 
     // Object
 
+    private final @NotNull Object lock = new Object();
+
     private final @Nullable String name;
     private final @NotNull Class<?> reference;
+
     private final @NotNull Class<?> @NotNull [] dependencies;
+    public final @NotNull Set<@NotNull PluginInfoImpl> dependants = new LinkedHashSet<>();
 
     private volatile @NotNull State state = State.IDLE;
 
@@ -28,7 +32,7 @@ final class PluginInfoImpl implements PluginInfo {
         this.dependencies = dependencies;
 
         // Register this plugin
-        Plugins.plugins.add(this);
+        Plugins.plugins.put(reference, this);
     }
 
     // Getters
@@ -40,9 +44,20 @@ final class PluginInfoImpl implements PluginInfo {
     public @NotNull Class<?> getReference() {
         return reference;
     }
+
     @Override
-    public @NotNull PluginInfo @NotNull [] getDependencies() {
-        return Arrays.stream(dependencies).map(Plugins::retrieve).toArray(PluginInfo[]::new);
+    @Unmodifiable
+    public @NotNull Collection<@NotNull PluginInfo> getDependencies() {
+        synchronized (lock) {
+            return Arrays.stream(dependencies).map(Plugins::retrieve).collect(Collectors.toSet());
+        }
+    }
+    @Override
+    @Unmodifiable
+    public @NotNull Collection<@NotNull PluginInfo> getDependants() {
+        synchronized (lock) {
+            return Collections.unmodifiableSet(dependants);
+        }
     }
 
     public @NotNull State getState() {
@@ -110,6 +125,17 @@ final class PluginInfoImpl implements PluginInfo {
             return;
         }
 
+        // Dependencies
+        @NotNull PluginInfo[] dependants = getDependants().stream().filter(dependency -> dependency.getState() != State.IDLE && dependency.getState() != State.FAILED).toArray(PluginInfo[]::new);
+
+        if (dependants.length == 0) {
+            @NotNull String list = Arrays.toString(dependants);
+            list = list.substring(1, list.length() - 1);
+
+            throw new PluginInterruptException(reference, "cannot interrupt plugin '" + getName() + "' because there's active dependants: " + list);
+        }
+
+        // Mark as stopping
         state = State.STOPPING;
 
         try {
