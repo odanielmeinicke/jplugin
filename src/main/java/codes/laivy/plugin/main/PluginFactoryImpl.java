@@ -11,8 +11,8 @@ import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.factory.PluginFactory;
 import codes.laivy.plugin.factory.handlers.Handlers;
 import codes.laivy.plugin.info.PluginInfo;
-import codes.laivy.plugin.loader.MethodPluginLoader;
-import codes.laivy.plugin.loader.PluginLoader;
+import codes.laivy.plugin.initializer.MethodPluginInitializer;
+import codes.laivy.plugin.initializer.PluginInitializer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -270,18 +270,18 @@ final class PluginFactoryImpl implements PluginFactory {
             }
 
             // Retrieve plugin loader
-            @NotNull PluginLoader loader;
+            @NotNull PluginInitializer loader;
 
             {
                 // Plugin loader class
-                @NotNull Class<? extends PluginLoader> loaderClass = MethodPluginLoader.class;
+                @NotNull Class<? extends PluginInitializer> loaderClass = MethodPluginInitializer.class;
                 if (reference.isAnnotationPresent(Initializer.class)) {
-                    loaderClass = reference.getAnnotation(Initializer.class).loader();
+                    loaderClass = reference.getAnnotation(Initializer.class).type();
                 }
 
                 try {
                     // Constructor
-                    @NotNull Constructor<? extends PluginLoader> constructor = loaderClass.getDeclaredConstructor();
+                    @NotNull Constructor<? extends PluginInitializer> constructor = loaderClass.getDeclaredConstructor();
                     constructor.setAccessible(true);
 
                     loader = constructor.newInstance();

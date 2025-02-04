@@ -6,7 +6,7 @@ import codes.laivy.plugin.category.PluginHandler;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.factory.handlers.Handlers;
-import codes.laivy.plugin.loader.ConstructorPluginLoader;
+import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
 import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -80,7 +80,7 @@ public abstract class PluginInfo {
 
     /**
      * Represents the instance of this plugin, the instance of the reference. It could be
-     * null if the {@link Initializer} uses a PluginLoader that generates the instance like {@link ConstructorPluginLoader}
+     * null if the {@link Initializer} uses a PluginInitializer that generates the instance like {@link ConstructorPluginInitializer}
      *
      * @return
      */

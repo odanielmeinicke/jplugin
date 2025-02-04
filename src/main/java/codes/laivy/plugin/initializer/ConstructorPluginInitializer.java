@@ -1,4 +1,4 @@
-package codes.laivy.plugin.loader;
+package codes.laivy.plugin.initializer;
 
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
@@ -8,19 +8,14 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.Closeable;
 import java.io.Flushable;
-import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
-/**
- * O MethodPluginLoader requer que a classe do plugin haja dois métodos estáticos:
- * 1. Um method de inicialização chamado
- */
-public final class MethodPluginLoader implements PluginLoader {
+public final class ConstructorPluginInitializer implements PluginInitializer {
 
     // Object
 
-    private MethodPluginLoader() {
+    private ConstructorPluginInitializer() {
     }
 
     // Modules
@@ -44,14 +39,14 @@ public final class MethodPluginLoader implements PluginLoader {
 
         @Override
         public void start() throws PluginInitializeException {
-            try {
-                super.start();
+            super.start();
 
-                @NotNull Method method = getReference().getDeclaredMethod("initialize");
-                method.setAccessible(true);
+            try {
+                @NotNull Constructor<?> constructor = getReference().getDeclaredConstructor();
+                constructor.setAccessible(true);
 
                 // Invoke method
-                this.instance = method.invoke(null);
+                this.instance = constructor.newInstance();
             } catch (@NotNull Throwable throwable) {
                 setState(State.FAILED);
 
@@ -59,13 +54,14 @@ public final class MethodPluginLoader implements PluginLoader {
                     if (throwable.getCause() instanceof PluginInitializeException) {
                         throw (PluginInitializeException) throwable.getCause();
                     }
-                    throw new PluginInitializeException(getReference(), "cannot invoke initialize method", throwable.getCause());
+
+                    throw new PluginInitializeException(getReference(), "cannot invoke constructor from class: " + getReference().getName(), throwable.getCause());
                 } else if (throwable instanceof NoSuchMethodException) {
-                    throw new PluginInitializeException(getReference(), "cannot find initialize method", throwable);
+                    throw new PluginInitializeException(getReference(), "there's no declared empty constructor at plugin's class: " + getReference().getName(), throwable);
                 } else if (throwable instanceof IllegalAccessException) {
-                    throw new PluginInitializeException(getReference(), "cannot access initialize method", throwable);
+                    throw new PluginInitializeException(getReference(), "cannot access declared empty constructor from plugin's class: " + getReference().getName(), throwable);
                 } else {
-                    throw new RuntimeException("cannot initialize plugin: " + getName(), throwable);
+                    throw new RuntimeException("cannot invoke declared empty constructor from plugin: " + getReference().getName(), throwable);
                 }
             }
 
@@ -81,32 +77,17 @@ public final class MethodPluginLoader implements PluginLoader {
             try {
                 super.close();
 
-                @NotNull Method method = getReference().getDeclaredMethod("interrupt");
-                method.setAccessible(true);
-
-                // Invoke method
-                method.invoke(null);
-
-                // Close instance
-                if (getInstance() != null) try {
-                    if (getInstance() instanceof Closeable) {
-                        ((Closeable) getInstance()).close();
-                    } else if (getInstance() instanceof Flushable) {
-                        ((Flushable) getInstance()).flush();
-                    }
-                } catch (@NotNull IOException e) {
-                    throw new PluginInterruptException(getReference(), "cannot close/flush plugin instance: " + getName());
+                if (getInstance() instanceof Closeable) {
+                    ((Closeable) getInstance()).close();
+                } else if (getInstance() instanceof Flushable) {
+                    ((Flushable) getInstance()).flush();
                 }
-            } catch (@NotNull InvocationTargetException e) {
+            } catch (@NotNull Throwable e) {
                 if (e.getCause() instanceof PluginInterruptException) {
                     throw (PluginInterruptException) e.getCause();
                 }
 
                 throw new PluginInterruptException(getReference(), "cannot invoke interrupt method", e.getCause());
-            } catch (@NotNull NoSuchMethodException e) {
-                throw new PluginInterruptException(getReference(), "cannot find interrupt method", e);
-            } catch (@NotNull IllegalAccessException e) {
-                throw new PluginInterruptException(getReference(), "cannot access interrupt method", e);
             } finally {
                 instance = null;
                 setState(State.IDLE);
