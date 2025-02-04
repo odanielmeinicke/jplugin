@@ -187,7 +187,7 @@ public abstract class PluginInfo {
         }
     }
     @FunctionalInterface
-    public interface ThrowingConsumer<T> {
+    private interface ThrowingConsumer<T> {
         void accept(T t) throws Throwable;
     }
 

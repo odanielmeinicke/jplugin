@@ -80,7 +80,10 @@ final class PluginFactoryImpl implements PluginFactory {
         Collections.reverse(plugins);
 
         for (@NotNull PluginInfo info : plugins) {
-            if (info.getReference().getClassLoader().equals(loader) && !Classes.isPackageWithin(packge, info.getReference().getPackage().getName(), recursive)) {
+            @NotNull String two = info.getReference().getPackage().getName();
+            boolean isWithin = recursive ? two.startsWith(packge) : two.equals(packge);
+
+            if (info.getReference().getClassLoader().equals(loader) && !isWithin) {
                 continue;
             }
 

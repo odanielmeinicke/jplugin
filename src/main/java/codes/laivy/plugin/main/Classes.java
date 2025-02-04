@@ -52,13 +52,6 @@ final class Classes {
 
         return buffer.toByteArray();
     }
-    public static boolean isPackageWithin(@NotNull String one, @NotNull String two, boolean recursive) {
-        if (recursive) {
-            return two.startsWith(one);
-        } else {
-            return two.equals(one);
-        }
-    }
     public static @NotNull Map<@NotNull String, @NotNull InputStream> getAllPluginTypeClasses() throws IOException {
         @NotNull Map<String, InputStream> classes = new HashMap<>();
         @NotNull String home = System.getProperty("java.home");
@@ -128,7 +121,7 @@ final class Classes {
             if (file.isDirectory()) {
                 findClassesInDirectory(file, packageName + file.getName() + ".", classes);
             } else if (file.getName().endsWith(".class")) {
-                byte[] bytecode = convertInputStreamToByteArray(Files.newInputStream(file.toPath()));
+                byte[] bytecode = toByteArray(Files.newInputStream(file.toPath()));
 
                 if (hasPluginType(bytecode)) {
                     @NotNull String name = packageName + file.getName().replace(".class", "");
@@ -145,7 +138,7 @@ final class Classes {
                 @NotNull JarEntry entry = entries.nextElement();
 
                 if (entry.getName().endsWith(".class")) {
-                    byte[] bytecode = convertInputStreamToByteArray(jar.getInputStream(entry));
+                    byte[] bytecode = toByteArray(jar.getInputStream(entry));
 
                     if (hasPluginType(bytecode)) {
                         @NotNull String name = entry.getName().replace("/", ".").replace(".class", "");
@@ -155,18 +148,6 @@ final class Classes {
             }
         }
     }
-    private static byte[] convertInputStreamToByteArray(@NotNull InputStream inputStream) throws IOException {
-        @NotNull ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        byte[] buffer = new byte[2048];
-        int bytesRead;
-
-        while ((bytesRead = inputStream.read(buffer)) != -1) {
-            byteArrayOutputStream.write(buffer, 0, bytesRead);
-        }
-
-        return byteArrayOutputStream.toByteArray();
-    }
-
     private static void listFiles(@NotNull File directory, @NotNull Map<@NotNull String, @NotNull URL> map) throws IOException {
         @NotNull File @Nullable [] files = directory.listFiles();
 

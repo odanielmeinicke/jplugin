@@ -24,7 +24,8 @@ public interface PluginHandler {
     }
 
     /**
-     * Called when the plugin is now starting, the state is STARTING at this moment
+     * Called when the plugin is now starting, the state is STARTING at this moment.
+     *
      * @param info
      */
     default void start(@NotNull PluginInfo info) throws PluginInitializeException {
