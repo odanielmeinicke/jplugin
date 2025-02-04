@@ -9,6 +9,8 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Opcodes;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -26,31 +28,36 @@ final class Classes {
 
     // Static initializers
 
+    public static @NotNull Class<?> define(byte[] bytes) {
+        try {
+            @NotNull Method define = ClassLoader.class.getDeclaredMethod("defineClass", byte[].class, int.class, int.class);
+            define.setAccessible(true);
+            return (Class<?>) define.invoke(Plugins.class.getClassLoader(), bytes, 0, bytes.length);
+        } catch (@NotNull NoSuchMethodException e) {
+            throw new RuntimeException("cannot find ClassLoader's #defineClass(byte[], int, int) method", e);
+        } catch (@NotNull IllegalAccessException e) {
+            throw new RuntimeException("cannot access ClassLoader's #defineClass(byte[], int, int) method", e);
+        } catch (@NotNull InvocationTargetException e) {
+            throw new RuntimeException("cannot invoke ClassLoader's #defineClass(byte[], int, int) method", e);
+        }
+    }
+    public static byte[] toByteArray(@NotNull InputStream input) throws IOException {
+        @NotNull ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] data = new byte[2048];
+
+        int bytesRead;
+        while ((bytesRead = input.read(data)) != -1) {
+            buffer.write(data, 0, bytesRead);
+        }
+
+        return buffer.toByteArray();
+    }
     public static boolean isPackageWithin(@NotNull String one, @NotNull String two, boolean recursive) {
         if (recursive) {
             return two.startsWith(one);
         } else {
             return two.equals(one);
         }
-    }
-
-    public static boolean hasPluginType(byte[] bytecode) {
-        @NotNull String interfaceName = Plugin.class.getName().replace('.', '/');
-        @NotNull AtomicBoolean bool = new AtomicBoolean(false);
-
-        @NotNull ClassReader classReader = new ClassReader(bytecode);
-        classReader.accept(new ClassVisitor(Opcodes.ASM9) {
-            @Override
-            public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-                if (descriptor.contains(interfaceName)) {
-                    bool.set(true);
-                }
-
-                return super.visitAnnotation(descriptor, visible);
-            }
-        }, 0);
-
-        return bool.get();
     }
     public static @NotNull Map<@NotNull String, @NotNull InputStream> getAllPluginTypeClasses() throws IOException {
         @NotNull Map<String, InputStream> classes = new HashMap<>();
@@ -71,7 +78,46 @@ final class Classes {
         }
         return classes;
     }
+    public static @NotNull Map<@NotNull String, @NotNull URL> read(@NotNull ClassLoader loader, @NotNull URL url) throws IOException {
+        @NotNull Map<@NotNull String, @NotNull URL> map = new LinkedHashMap<>();
+        @NotNull String protocol = url.getProtocol();
 
+        if ("file".equals(protocol)) {
+            @NotNull Map<String, URL> temp = new LinkedHashMap<>();
+            @NotNull File directory = new File(URLDecoder.decode(url.getPath(), "UTF-8"));
+
+            if (directory.isDirectory()) listFiles(directory, temp);
+
+            for (@NotNull Entry<@NotNull String, @NotNull URL> entry : temp.entrySet()) try {
+                map.put(entry.getKey().substring(url.toURI().getPath().length() - 1), entry.getValue());
+            } catch (@NotNull URISyntaxException e) {
+                throw new RuntimeException("cannot generate uri from url: " + url, e);
+            }
+        }
+
+        return map;
+    }
+
+    // Private utilities
+
+    private static boolean hasPluginType(byte[] bytecode) {
+        @NotNull String interfaceName = Plugin.class.getName().replace('.', '/');
+        @NotNull AtomicBoolean bool = new AtomicBoolean(false);
+
+        @NotNull ClassReader classReader = new ClassReader(bytecode);
+        classReader.accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override
+            public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+                if (descriptor.contains(interfaceName)) {
+                    bool.set(true);
+                }
+
+                return super.visitAnnotation(descriptor, visible);
+            }
+        }, 0);
+
+        return bool.get();
+    }
     private static void findClassesInDirectory(@NotNull File directory, @NotNull String packageName, @NotNull Map<@NotNull String, @NotNull InputStream> classes) throws IOException {
         // Retrieve directory files
         @NotNull File[] files = directory.listFiles();
@@ -121,25 +167,6 @@ final class Classes {
         return byteArrayOutputStream.toByteArray();
     }
 
-    public static @NotNull Map<@NotNull String, @NotNull URL> read(@NotNull ClassLoader loader, @NotNull URL url) throws IOException {
-        @NotNull Map<@NotNull String, @NotNull URL> map = new LinkedHashMap<>();
-        @NotNull String protocol = url.getProtocol();
-
-        if ("file".equals(protocol)) {
-            @NotNull Map<String, URL> temp = new LinkedHashMap<>();
-            @NotNull File directory = new File(URLDecoder.decode(url.getPath(), "UTF-8"));
-
-            if (directory.isDirectory()) listFiles(directory, temp);
-
-            for (@NotNull Entry<@NotNull String, @NotNull URL> entry : temp.entrySet()) try {
-                map.put(entry.getKey().substring(url.toURI().getPath().length() - 1), entry.getValue());
-            } catch (@NotNull URISyntaxException e) {
-                throw new RuntimeException("cannot generate uri from url: " + url, e);
-            }
-        }
-
-        return map;
-    }
     private static void listFiles(@NotNull File directory, @NotNull Map<@NotNull String, @NotNull URL> map) throws IOException {
         @NotNull File @Nullable [] files = directory.listFiles();
 
