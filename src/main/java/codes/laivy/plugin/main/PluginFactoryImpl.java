@@ -316,25 +316,27 @@ final class PluginFactoryImpl implements PluginFactory {
             }
 
             // Name
-            @Nullable String pluginName = reference.getAnnotation(Plugin.class).name();
-            if (pluginName != null && pluginName.isEmpty()) pluginName = null;
+            @Nullable String name = reference.getAnnotation(Plugin.class).name();
+            if (name != null && name.isEmpty()) name = null;
+
+            // Description
+            @Nullable String description = reference.getAnnotation(Plugin.class).description();
+            if (description != null && description.isEmpty()) description = null;
 
             // Create instance and register it
-            @NotNull PluginInfo plugin = loader.create(reference, pluginName, dependencies.toArray(new PluginInfo[0]));
+            @NotNull PluginInfo plugin = loader.create(reference, name, description, dependencies.toArray(new PluginInfo[0]));
 
             // Call Handlers
             {
                 // Category handlers
                 for (@NotNull Category category : reference.getAnnotationsByType(Category.class)) {
-                    @NotNull String name = category.name();
-
-                    for (@NotNull PluginHandler handler : Plugins.getFactory().getHandlers(name)) {
+                    for (@NotNull PluginHandler handler : Plugins.getFactory().getHandlers(category.name())) {
                         try {
                             if (!handler.accept(plugin)) {
                                 continue main;
                             }
                         } catch (@NotNull Throwable throwable) {
-                            throw new RuntimeException("cannot invoke category's handler to accept '" + pluginName + "': " + handler);
+                            throw new RuntimeException("cannot invoke category's handler to accept '" + category.name() + "': " + handler);
                         }
                     }
                 }
@@ -346,7 +348,7 @@ final class PluginFactoryImpl implements PluginFactory {
                             continue main;
                         }
                     } catch (@NotNull Throwable throwable) {
-                        throw new RuntimeException("cannot invoke global handler to accept '" + pluginName + "': " + handler);
+                        throw new RuntimeException("cannot invoke global handler to accept '" + name + "': " + handler);
                     }
                 }
             }

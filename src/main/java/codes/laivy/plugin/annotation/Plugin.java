@@ -11,4 +11,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface Plugin {
     @Nullable String name() default "";
+    @Nullable String description() default "";
 }

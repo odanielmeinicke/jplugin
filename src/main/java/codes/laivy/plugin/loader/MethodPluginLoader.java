@@ -12,6 +12,10 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+/**
+ * O MethodPluginLoader requer que a classe do plugin haja dois métodos estáticos:
+ * 1. Um method de inicialização chamado
+ */
 public final class MethodPluginLoader implements PluginLoader {
 
     // Object
@@ -22,8 +26,8 @@ public final class MethodPluginLoader implements PluginLoader {
     // Modules
 
     @Override
-    public @NotNull PluginInfo create(@NotNull Class<?> reference, @Nullable String name, @NotNull PluginInfo @NotNull [] dependencies) {
-        return new PluginInfoImpl(reference, name, dependencies);
+    public @NotNull PluginInfo create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies) {
+        return new PluginInfoImpl(reference, name, description, dependencies);
     }
 
     // Classes
@@ -32,8 +36,8 @@ public final class MethodPluginLoader implements PluginLoader {
 
         // Object
 
-        public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @NotNull PluginInfo @NotNull [] dependencies) {
-            super(reference, name, dependencies);
+        public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies) {
+            super(reference, name, description, dependencies);
         }
 
         // Modules

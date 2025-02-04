@@ -19,6 +19,8 @@ public abstract class PluginInfo {
     // Object
 
     private final @Nullable String name;
+    private final @Nullable String description;
+
     private final @NotNull Class<?> reference;
 
     private final @NotNull PluginInfo @NotNull [] dependencies;
@@ -29,9 +31,11 @@ public abstract class PluginInfo {
 
     private final @NotNull Handlers handlers = Handlers.create();
 
-    public PluginInfo(@NotNull Class<?> reference, @Nullable String name, @NotNull PluginInfo @NotNull [] dependencies) {
-        this.reference = reference;
+    public PluginInfo(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies) {
         this.name = name;
+        this.description = description;
+
+        this.reference = reference;
         this.dependencies = dependencies;
     }
 
@@ -39,6 +43,9 @@ public abstract class PluginInfo {
 
     public @NotNull String getName() {
         return name != null ? name : getReference().getName();
+    }
+    public @Nullable String getDescription() {
+        return description;
     }
 
     public final @NotNull State getState() {
@@ -99,7 +106,7 @@ public abstract class PluginInfo {
             @NotNull String list = Arrays.toString(dependants);
             list = list.substring(1, list.length() - 1);
 
-            throw new PluginInterruptException(reference, "cannot interrupt plugin '" + getName() + "' because there's active dependants: " + list);
+            throw new IllegalStateException("cannot interrupt plugin '" + getName() + "' because there's active dependants: " + list);
         }
 
         // Mark as stopping
@@ -132,10 +139,23 @@ public abstract class PluginInfo {
 
     public enum State {
 
+        /**
+         * In case the plugin is idle. A plugin can be idle when it's been created or when it fully stops running
+         */
         IDLE,
+
+        /**
+         * The failed state of a plugin can be caused if the plugin failed to start. This state is considered an idle state
+         * If the plugin fail to stop, it will not receive this state, it will receive the idle state normally.
+         *
+         */
         FAILED,
 
         STARTING,
+
+        /**
+         * When the plugin is running
+         */
         RUNNING,
         STOPPING,
         ;
