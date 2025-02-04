@@ -11,5 +11,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface Initializer {
-    @NotNull Class<? extends PluginLoader> type();
+    @NotNull Class<? extends PluginLoader> loader();
 }
