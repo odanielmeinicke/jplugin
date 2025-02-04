@@ -1,11 +1,14 @@
 package codes.laivy.plugin.main;
 
-import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.annotation.Dependency;
+import codes.laivy.plugin.annotation.Initializer;
 import codes.laivy.plugin.annotation.Plugin;
 import codes.laivy.plugin.exception.InvalidPluginException;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
+import codes.laivy.plugin.info.PluginInfo;
+import codes.laivy.plugin.loader.MethodPluginLoader;
+import codes.laivy.plugin.loader.PluginLoader;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -13,9 +16,12 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public final class Plugins {
@@ -26,7 +32,7 @@ public final class Plugins {
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
     }
 
-    static final @NotNull Map<Class<?>, PluginInfoImpl> plugins = new LinkedHashMap<>();
+    static final @NotNull Map<Class<?>, PluginInfo> plugins = new LinkedHashMap<>();
 
     public static @NotNull PluginInfo retrieve(@NotNull Class<?> reference) {
         return plugins.values().stream().filter(plugin -> plugin.getReference().equals(reference)).findFirst().orElseThrow(() -> new IllegalArgumentException("the class '" + reference.getName() + "' isn't a plugin"));
@@ -193,31 +199,58 @@ public final class Plugins {
         }
     }
 
-    private static void load(@NotNull Collection<@NotNull Class<?>> references) throws PluginInitializeException {
+    private static void load(@NotNull Set<@NotNull Class<?>> references) throws PluginInitializeException {
         // Create instances
-        @NotNull Map<@NotNull Class<?>, @NotNull PluginInfoImpl> plugins = new LinkedHashMap<>();
-
-        for (@NotNull Class<?> reference : references) {
+        for (@NotNull Class<?> reference : organize(references)) {
             // Check if it's an inner and non-static class
             if (reference.getEnclosingClass() != null && !Modifier.isStatic(reference.getModifiers())) {
                 throw new InvalidPluginException(reference, "a non-static inner class cannot be a plugin, the class should be atleast static");
             }
 
+            // Retrieve plugin loader
+            @NotNull PluginLoader loader;
+
+            {
+                // Plugin loader class
+                @NotNull Class<? extends PluginLoader> loaderClass = MethodPluginLoader.class;
+                if (reference.isAnnotationPresent(Initializer.class)) {
+                    loaderClass = reference.getAnnotation(Initializer.class).type();
+                }
+
+                try {
+                    // Constructor
+                    @NotNull Constructor<? extends PluginLoader> constructor = loaderClass.getDeclaredConstructor();
+                    constructor.setAccessible(true);
+
+                    loader = constructor.newInstance();
+                } catch (@NotNull InvocationTargetException e) {
+                    throw new RuntimeException("cannot execute plugin loader's constructor: " + loaderClass, e);
+                } catch (NoSuchMethodException e) {
+                    throw new RuntimeException("cannot find plugin loader's empty declared constructor: " + loaderClass, e);
+                } catch (InstantiationException e) {
+                    throw new RuntimeException("cannot instantiate plugin loader: " + loaderClass, e);
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException("cannot access plugin loader's constructor: " + loaderClass, e);
+                }
+            }
+
             // Dependencies
-            @NotNull Set<Class<?>> dependencies = new LinkedHashSet<>();
+            @NotNull Set<PluginInfo> dependencies = new LinkedHashSet<>();
 
             for (@NotNull Dependency annotation : reference.getAnnotationsByType(Dependency.class)) {
                 @NotNull Class<?> dependency = annotation.type();
 
                 // Check issues
-                if (!Plugins.plugins.containsKey(dependency)) {
-                    throw new InvalidPluginException(reference, "there's a dependency that is not a plugin at '" + reference.getName() + "': " + dependency.getName());
-                } else if (dependency == reference) {
+                if (dependency == reference) {
                     throw new InvalidPluginException(reference, "the plugin cannot have a dependency on itself");
                 }
 
                 // Generate instance
-                dependencies.add(dependency);
+                if (plugins.containsKey(dependency)) {
+                    dependencies.add(plugins.get(dependency));
+                } else {
+                    throw new InvalidPluginException(reference, "there's a dependency that is not a plugin at '" + reference.getName() + "': " + dependency.getName());
+                }
             }
 
             // Name
@@ -225,7 +258,7 @@ public final class Plugins {
             if (name != null && name.isEmpty()) name = null;
 
             // Create instance and register it
-            @NotNull PluginInfoImpl plugin = new PluginInfoImpl(name, reference, dependencies.toArray(new Class[0]));
+            @NotNull PluginInfo plugin = loader.create(reference, name, dependencies.toArray(new PluginInfo[0]));
             plugins.put(reference, plugin);
         }
 
@@ -241,26 +274,26 @@ public final class Plugins {
         }
 
         // Add dependencies
-        for (@NotNull PluginInfoImpl plugin : plugins.values()) {
-            @NotNull List<@NotNull PluginInfoImpl> dependants = plugins.values().stream().filter(target -> target.getDependencies().contains(plugin)).collect(Collectors.toList());
-            plugin.dependants.addAll(dependants);
+        for (@NotNull PluginInfo plugin : plugins.values()) {
+            @NotNull List<@NotNull PluginInfo> dependants = plugins.values().stream().filter(target -> target.getDependencies().contains(plugin)).collect(Collectors.toList());
+            plugin.getDependants().addAll(dependants);
         }
     }
-    private static @NotNull Set<PluginInfo> organize(@NotNull Collection<@NotNull PluginInfoImpl> plugins) {
-        @NotNull Set<PluginInfo> sorted = new LinkedHashSet<>();
-        @NotNull List<PluginInfo> remaining = new ArrayList<>(plugins);
+    private static @NotNull Set<Class<?>> organize(@NotNull Set<@NotNull Class<?>> references) {
+        @NotNull Set<Class<?>> sorted = new LinkedHashSet<>();
+        @NotNull List<Class<?>> remaining = new ArrayList<>(references);
 
         boolean progress;
         do {
             progress = false;
-            @NotNull Iterator<PluginInfo> iterator = remaining.iterator();
+            @NotNull Iterator<Class<?>> iterator = remaining.iterator();
 
             while (iterator.hasNext()) {
-                @NotNull PluginInfo plugin = iterator.next();
-                @NotNull Collection<PluginInfo> dependencies = plugin.getDependencies();
+                @NotNull Class<?> reference = iterator.next();
+                @NotNull Collection<Class<?>> dependencies = Arrays.stream(reference.getAnnotationsByType(Dependency.class)).map(Dependency::type).collect(Collectors.toList());
 
                 if (dependencies.isEmpty() || sorted.containsAll(dependencies)) {
-                    sorted.add(plugin);
+                    sorted.add(reference);
                     iterator.remove();
                     progress = true;
                 }
@@ -273,13 +306,20 @@ public final class Plugins {
 
         return sorted;
     }
+    private static @NotNull Set<PluginInfo> organize(@NotNull Collection<@NotNull PluginInfo> plugins) {
+        @NotNull Set<PluginInfo> set = new LinkedHashSet<>();
+        @NotNull Map<Class<?>, PluginInfo> map = plugins.stream().collect(Collectors.toMap(PluginInfo::getReference, Function.identity(), (a, b) -> a, LinkedHashMap::new));
+        organize(map.keySet()).forEach(ref -> set.add(map.get(ref)));
+
+        return set;
+    }
 
     // Object
 
     private Plugins() {
         throw new UnsupportedOperationException("this class cannot be instantiated");
     }
-    
+
     // Classes
 
     private static final class ShutdownHook extends Thread {
@@ -302,5 +342,5 @@ public final class Plugins {
         }
 
     }
-    
+
 }
