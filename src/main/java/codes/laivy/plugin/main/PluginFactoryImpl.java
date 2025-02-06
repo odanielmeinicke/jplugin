@@ -16,6 +16,10 @@ import codes.laivy.plugin.initializer.PluginInitializer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.Opcodes;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,6 +29,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -212,27 +217,36 @@ final class PluginFactoryImpl implements PluginFactory {
     @ApiStatus.Experimental
     public void initializeAll() throws PluginInitializeException, IOException {
         // Variables
-        @NotNull Set<@NotNull Class<?>> references = new LinkedHashSet<>();
+        @NotNull Set<@NotNull Class<?>> references = new HashSet<>();
 
-        // Retrieve all plugins
-        for (@NotNull Map.Entry<@NotNull String, @NotNull InputStream> entry : Classes.getAllPluginTypeClasses().entrySet()) {
-            @NotNull String name = entry.getKey();
-            @NotNull InputStream stream = entry.getValue();
+        // Collect all references
+        Classes.getAllTypeClassesWithVisitor(new BiConsumer<String, InputStream>() {
+            @Override
+            public void accept(@NotNull String name, @NotNull InputStream stream) {
+                try {
+                    @NotNull Class<?> reference = Class.forName(name, false, ClassLoader.getSystemClassLoader());
+                    if (reference.isAnnotationPresent(Plugin.class)) references.add(reference);
+                } catch (@NotNull ClassNotFoundException | @NotNull NoClassDefFoundError e) {
+                    try {
+                        @NotNull ClassReader reader = new ClassReader(stream);
+                        @NotNull ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9) {
+                            @Override
+                            public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+                                if (descriptor.contains(Plugin.class.getName().replace('.', '/'))) {
+                                    //noinspection deprecation
+                                    references.add(Classes.define(reader.b));
+                                }
 
-            // Check bytes
-            @NotNull Class<?> reference;
+                                return super.visitAnnotation(descriptor, visible);
+                            }
+                        };
 
-            try {
-                // Check if class exists
-                reference = Class.forName(name);
-            } catch (@NotNull ClassNotFoundException ignore) {
-                // Define class
-                reference = Classes.define(Classes.toByteArray(stream));
+                        reader.accept(visitor, 0);
+                    } catch (@NotNull IOException ignore) {
+                    }
+                }
             }
-
-            // Add plugin to references, and load it later.
-            references.add(reference);
-        }
+        });
 
         // Load references
         load(references);
@@ -245,6 +259,13 @@ final class PluginFactoryImpl implements PluginFactory {
         for (@NotNull PluginInfo info : plugins) {
             info.close();
         }
+    }
+
+    // Finders
+
+    @Override
+    public @NotNull PluginFinder find() {
+        return new PluginFinderImpl();
     }
 
     // Iterator and stream
