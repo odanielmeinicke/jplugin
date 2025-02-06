@@ -88,7 +88,7 @@ final class Classes {
 
     // Private utilities
 
-    public static void findClassesInDirectory(@NotNull File directory, @NotNull String packageName, @NotNull BiConsumer<@NotNull String, @NotNull InputStream> consumer) throws IOException {
+    private static void findClassesInDirectory(@NotNull File directory, @NotNull String packageName, @NotNull BiConsumer<@NotNull String, @NotNull InputStream> consumer) throws IOException {
         // Retrieve directory files
         @NotNull File[] files = directory.listFiles();
         if (files == null) files = new File[0];
@@ -106,7 +106,7 @@ final class Classes {
             }
         }
     }
-    public static void findClassesInJar(@NotNull File file, @NotNull BiConsumer<@NotNull String, @NotNull InputStream> consumer) throws IOException {
+    private static void findClassesInJar(@NotNull File file, @NotNull BiConsumer<@NotNull String, @NotNull InputStream> consumer) throws IOException {
         try (@NotNull JarFile jar = new JarFile(file)) {
             @NotNull Enumeration<JarEntry> entries = jar.entries();
 

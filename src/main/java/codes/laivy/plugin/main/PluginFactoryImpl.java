@@ -344,20 +344,26 @@ final class PluginFactoryImpl implements PluginFactory {
             @Nullable String description = reference.getAnnotation(Plugin.class).description();
             if (description != null && description.isEmpty()) description = null;
 
+            // Categories
+            @NotNull Set<String> categories = new LinkedHashSet<>();
+            for (@NotNull Category category : reference.getAnnotationsByType(Category.class)) {
+                categories.add(category.name());
+            }
+
             // Create instance and register it
-            @NotNull PluginInfo plugin = loader.create(reference, name, description, dependencies.toArray(new PluginInfo[0]));
+            @NotNull PluginInfo plugin = loader.create(reference, name, description, dependencies.toArray(new PluginInfo[0]), categories.toArray(new String[0]));
 
             // Call Handlers
             {
                 // Category handlers
-                for (@NotNull Category category : reference.getAnnotationsByType(Category.class)) {
-                    for (@NotNull PluginHandler handler : Plugins.getFactory().getHandlers(category.name())) {
+                for (@NotNull String category : categories) {
+                    for (@NotNull PluginHandler handler : Plugins.getFactory().getHandlers(category)) {
                         try {
                             if (!handler.accept(plugin)) {
                                 continue main;
                             }
                         } catch (@NotNull Throwable throwable) {
-                            throw new RuntimeException("cannot invoke category's handler to accept '" + category.name() + "': " + handler);
+                            throw new RuntimeException("cannot invoke category's handler to accept '" + category + "': " + handler);
                         }
                     }
                 }
