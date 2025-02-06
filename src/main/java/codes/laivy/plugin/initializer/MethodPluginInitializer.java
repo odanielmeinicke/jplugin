@@ -26,8 +26,8 @@ public final class MethodPluginInitializer implements PluginInitializer {
     // Modules
 
     @Override
-    public @NotNull PluginInfo create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies) {
-        return new PluginInfoImpl(reference, name, description, dependencies);
+    public @NotNull PluginInfo create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
+        return new PluginInfoImpl(reference, name, description, dependencies, categories);
     }
 
     // Classes
@@ -36,8 +36,8 @@ public final class MethodPluginInitializer implements PluginInitializer {
 
         // Object
 
-        public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies) {
-            super(reference, name, description, dependencies);
+        public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
+            super(reference, name, description, dependencies, categories, MethodPluginInitializer.class);
         }
 
         // Modules
@@ -65,7 +65,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
                 } else if (throwable instanceof IllegalAccessException) {
                     throw new PluginInitializeException(getReference(), "cannot access initialize method", throwable);
                 } else {
-                    throw new RuntimeException("cannot initialize plugin: " + getName(), throwable);
+                    throw new RuntimeException("cannot initialize plugin: " + this, throwable);
                 }
             }
 
@@ -95,7 +95,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
                         ((Flushable) getInstance()).flush();
                     }
                 } catch (@NotNull IOException e) {
-                    throw new PluginInterruptException(getReference(), "cannot close/flush plugin instance: " + getName());
+                    throw new PluginInterruptException(getReference(), "cannot close/flush plugin instance: " + this);
                 }
             } catch (@NotNull InvocationTargetException e) {
                 if (e.getCause() instanceof PluginInterruptException) {

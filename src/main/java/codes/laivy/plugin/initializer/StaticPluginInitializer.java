@@ -20,8 +20,8 @@ public final class StaticPluginInitializer implements PluginInitializer {
     // Modules
 
     @Override
-    public @NotNull PluginInfo create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies) {
-        return new PluginInfoImpl(reference, name, description, dependencies);
+    public @NotNull PluginInfo create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
+        return new PluginInfoImpl(reference, name, description, dependencies, categories);
     }
 
     // Classes
@@ -30,8 +30,8 @@ public final class StaticPluginInitializer implements PluginInitializer {
 
         // Object
 
-        public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies) {
-            super(reference, name, description, dependencies);
+        public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
+            super(reference, name, description, dependencies, categories, StaticPluginInitializer.class);
         }
 
         // Modules
@@ -42,7 +42,7 @@ public final class StaticPluginInitializer implements PluginInitializer {
                 super.start();
             } catch (@NotNull Throwable throwable) {
                 setState(State.FAILED);
-                throw new RuntimeException("cannot initialize plugin: " + getName(), throwable);
+                throw new RuntimeException("cannot initialize plugin: " + this, throwable);
             }
 
             // Mark as running

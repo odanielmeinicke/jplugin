@@ -11,5 +11,5 @@ import org.jetbrains.annotations.Nullable;
  * Ele deve cuidar de criar uma instância do PluginInfo que seja funcional e compatível com o resto do sistema
  */
 public interface PluginInitializer {
-    @NotNull PluginInfo create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies);
+    @NotNull PluginInfo create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull String @NotNull [] categories);
 }

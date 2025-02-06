@@ -21,8 +21,8 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
     // Modules
 
     @Override
-    public @NotNull PluginInfo create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies) {
-        return new PluginInfoImpl(reference, name, description, dependencies);
+    public @NotNull PluginInfo create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
+        return new PluginInfoImpl(reference, name, description, dependencies, categories);
     }
 
     // Classes
@@ -31,8 +31,8 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
 
         // Object
 
-        public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies) {
-            super(reference, name, description, dependencies);
+        public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
+            super(reference, name, description, dependencies, categories, ConstructorPluginInitializer.class);
         }
 
         // Modules
