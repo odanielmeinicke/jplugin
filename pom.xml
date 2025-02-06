@@ -6,7 +6,8 @@
 
     <groupId>codes.laivy.module</groupId>
     <artifactId>jplugin</artifactId>
-    <version>1.0</version>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>A plugins module to easily "load" and control classes at your application</description>
@@ -22,7 +23,6 @@
     <developers>
         <developer>
             <name>Daniel Meinicke</name>
-            <id>Meinicke</id>
             <timezone>GMT-3 São Paulo</timezone>
             <email>dnlfg.contato@gmail.com</email>
             <url>https://danielmeinicke.com/</url>
@@ -132,6 +132,33 @@
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.7.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>net.ju-n.maven.plugins</groupId>
+                <artifactId>checksum-maven-plugin</artifactId>
+                <version>1.2</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>artifacts</goal>
                         </goals>
                     </execution>
                 </executions>

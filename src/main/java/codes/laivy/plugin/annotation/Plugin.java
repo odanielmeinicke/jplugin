@@ -35,7 +35,7 @@ import java.lang.annotation.Target;
  * <p>
  * <strong>Example Usage:</strong>
  * <pre>{@code
- * @Plugin(name = "MyPlugin", description = "A sample plugin for demonstration purposes")
+ * &#064;Plugin(name = "MyPlugin", description = "A sample plugin for demonstration purposes")
  * public class MyPlugin {
  *     // Plugin implementation details
  * }

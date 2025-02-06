@@ -21,9 +21,9 @@ import static codes.laivy.plugin.annotation.Dependency.Dependencies;
  * <p>
  * <strong>Example Usage:</strong>
  * <pre>{@code
- * @Dependency(type = SomeLibrary.class)
- * @Dependency(type = AnotherPlugin.class)
- * @Plugin
+ * &#064;Dependency(type = SomeLibrary.class)
+ * &#064;Dependency(type = AnotherPlugin.class)
+ * &#064;Plugin
  * public class MyPlugin {
  *     // Plugin implementation
  * }

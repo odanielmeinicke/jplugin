@@ -14,8 +14,8 @@ import java.lang.annotation.*;
  * <p>Example usage:</p>
  * <pre>
  * {@code
- * @Category(name = "Utility")
- * @Plugin
+ * &#064;Category(name  = "Utility")
+ * &#064;Plugin
  * public class MyPlugin {
  *     // Plugin implementation
  * }

@@ -44,22 +44,10 @@ The **JPlugin Framework** provides a set of tools to facilitate modular plugin d
 
 ## Installation
 
-To install the **JPlugin Framework**, follow these steps:
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/ItsLaivy/jplugin.git
-   cd jplugin
-2. Add the dependency to your project. If you're using Maven, add the following to your pom.xml:
-
-   ```xml
-   <dependency>
-       <groupId>codes.laivy</groupId>
-       <artifactId>jplugin</artifactId>
-       <version>1.0</version>
-   </dependency>
-3. Ensure that your IDE supports the framework and has all required configurations.
-4. Check for any additional setup instructions provided in the documentation for specific environments (e.g., Maven, Gradle).
+For now, there's no public artifact at the Maven Central for this.
+To use the **JPlugin** framework.
+You should install it manually at your project
+using [Maven Guide to installing 3rd party JARs](https://maven.apache.org/guides/mini/guide-3rd-party-jars-local.html)
 
 ---
 
