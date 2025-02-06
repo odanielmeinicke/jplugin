@@ -94,7 +94,7 @@ final class PluginFinderImpl implements PluginFinder {
         this.packages.clear();
 
         for (@NotNull Package packge : packages) {
-            this.packages.put(packge.getName(), false);
+            this.packages.put(packge.getName(), true);
         }
 
         return this;
@@ -104,7 +104,7 @@ final class PluginFinderImpl implements PluginFinder {
         this.packages.clear();
 
         for (@NotNull String packge : packages) {
-            this.packages.put(packge, false);
+            this.packages.put(packge, true);
         }
 
         return this;
@@ -112,7 +112,7 @@ final class PluginFinderImpl implements PluginFinder {
 
     @Override
     public @NotNull PluginFinder addPackage(@NotNull String packge) {
-        packages.put(packge, false);
+        packages.put(packge, true);
         return this;
     }
     @Override
@@ -122,7 +122,7 @@ final class PluginFinderImpl implements PluginFinder {
     }
     @Override
     public @NotNull PluginFinder addPackage(@NotNull Package packge) {
-        packages.put(packge.getName(), false);
+        packages.put(packge.getName(), true);
         return this;
     }
     @Override
