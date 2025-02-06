@@ -439,19 +439,23 @@ final class PluginFinderImpl implements PluginFinder {
     @Override
     public @NotNull PluginInfo @NotNull [] load(@NotNull Predicate<Class<?>> predicate) throws PluginInitializeException, IOException {
         // Variables
-        @NotNull Set<Class<?>> references = new HashSet<>(Arrays.asList(classes()));
         @NotNull Map<Class<?>, PluginInfo> plugins = new LinkedHashMap<>();
 
         // Create instances
         main:
-        for (@NotNull Class<?> reference : organize(references)) {
+        for (@NotNull Class<?> reference : organize(new HashSet<>(Arrays.asList(classes())))) {
+            // Check if predicate validates it
+            if (!predicate.test(reference)) {
+                continue;
+            }
+
             // Check if it's an inner and non-class
             if (reference.getEnclosingClass() != null && !Modifier.isStatic(reference.getModifiers())) {
                 throw new InvalidPluginException(reference, "a non-inner class cannot be a plugin, the class should be atleast static");
             }
 
             // Retrieve plugin loader
-            @NotNull PluginInitializer loader;
+            @NotNull PluginInitializer initializer;
 
             {
                 // Plugin loader class
@@ -465,7 +469,7 @@ final class PluginFinderImpl implements PluginFinder {
                     @NotNull Constructor<? extends PluginInitializer> constructor = loaderClass.getDeclaredConstructor();
                     constructor.setAccessible(true);
 
-                    loader = constructor.newInstance();
+                    initializer = constructor.newInstance();
                 } catch (@NotNull InvocationTargetException e) {
                     throw new RuntimeException("cannot execute plugin loader's constructor: " + loaderClass, e);
                 } catch (NoSuchMethodException e) {
@@ -511,7 +515,7 @@ final class PluginFinderImpl implements PluginFinder {
             }
 
             // Create instance and register it
-            @NotNull PluginInfo plugin = loader.create(reference, name, description, dependencies.toArray(new PluginInfo[0]), categories.toArray(new String[0]));
+            @NotNull PluginInfo plugin = initializer.create(reference, name, description, dependencies.toArray(new PluginInfo[0]), categories.toArray(new String[0]));
 
             // Call Handlers
             {
