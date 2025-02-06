@@ -7,6 +7,7 @@ import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.factory.handlers.Handlers;
 import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
+import codes.laivy.plugin.initializer.PluginInitializer;
 import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -26,24 +27,31 @@ public abstract class PluginInfo {
     private final @NotNull PluginInfo @NotNull [] dependencies;
     public final @NotNull Set<@NotNull PluginInfo> dependants = new LinkedHashSet<>();
 
+    private final @NotNull Set<String> categories;
+    private final @NotNull Class<? extends PluginInitializer> initializer;
+
     private volatile @NotNull State state = State.IDLE;
     protected @Nullable Object instance;
 
     private final @NotNull Handlers handlers = Handlers.create();
 
-    public PluginInfo(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies) {
+    public PluginInfo(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull Class<? extends PluginInitializer> initializer) {
         this.name = name;
         this.description = description;
 
         this.reference = reference;
         this.dependencies = dependencies;
+
+        this.categories = new HashSet<>(Arrays.asList(categories));
+        this.initializer = initializer;
     }
 
     // Getters
 
-    public @NotNull String getName() {
-        return name != null ? name : getReference().getName();
+    public @Nullable String getName() {
+        return name;
     }
+
     public @Nullable String getDescription() {
         return description;
     }
@@ -72,6 +80,13 @@ public abstract class PluginInfo {
     }
     public final @NotNull Collection<@NotNull PluginInfo> getDependants() {
         return dependants;
+    }
+
+    public @NotNull Collection<String> getCategories() {
+        return categories;
+    }
+    public @NotNull Class<? extends PluginInitializer> getInitializer() {
+        return initializer;
     }
 
     public @NotNull Handlers getHandlers() {
@@ -106,7 +121,7 @@ public abstract class PluginInfo {
             @NotNull String list = Arrays.toString(dependants);
             list = list.substring(1, list.length() - 1);
 
-            throw new IllegalStateException("cannot interrupt plugin '" + getName() + "' because there's active dependants: " + list);
+            throw new IllegalStateException("cannot interrupt plugin '" + this + "' because there's active dependants: " + list);
         }
 
         // Mark as stopping
@@ -132,7 +147,7 @@ public abstract class PluginInfo {
 
     @Override
     public final @NotNull String toString() {
-        return getName();
+        return name != null ? name : getReference().getName();
     }
 
     // Classes
@@ -179,7 +194,7 @@ public abstract class PluginInfo {
                 try {
                     consumer.accept(handler);
                 } catch (@NotNull Throwable throwable) {
-                    throw new RuntimeException("cannot invoke plugin's handler to " + action + " '" + getName() + "': " + handler);
+                    throw new RuntimeException("cannot invoke plugin's handler to " + action + " '" + this + "': " + handler);
                 }
             }
 
@@ -191,7 +206,7 @@ public abstract class PluginInfo {
                     try {
                         consumer.accept(handler);
                     } catch (@NotNull Throwable throwable) {
-                        throw new RuntimeException("cannot invoke category's handler to " + action + " '" + getName() + "': " + handler);
+                        throw new RuntimeException("cannot invoke category's handler to " + action + " '" + this + "': " + handler);
                     }
                 }
             }
@@ -201,7 +216,7 @@ public abstract class PluginInfo {
                 try {
                     consumer.accept(handler);
                 } catch (@NotNull Throwable throwable) {
-                    throw new RuntimeException("cannot invoke global handler to " + action + " '" + getName() + "': " + handler);
+                    throw new RuntimeException("cannot invoke global handler to " + action + " '" + this + "': " + handler);
                 }
             }
         }
