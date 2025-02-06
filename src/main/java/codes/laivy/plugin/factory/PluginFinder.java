@@ -1,7 +1,7 @@
 package codes.laivy.plugin.factory;
 
 import codes.laivy.plugin.exception.PluginInitializeException;
-import codes.laivy.plugin.info.PluginInfo;
+import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.initializer.PluginInitializer;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;

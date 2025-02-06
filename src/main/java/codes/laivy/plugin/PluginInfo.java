@@ -1,4 +1,4 @@
-package codes.laivy.plugin.info;
+package codes.laivy.plugin;
 
 import codes.laivy.plugin.annotation.Category;
 import codes.laivy.plugin.category.PluginHandler;

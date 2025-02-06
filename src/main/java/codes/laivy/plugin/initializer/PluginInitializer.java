@@ -1,7 +1,7 @@
 package codes.laivy.plugin.initializer;
 
 import codes.laivy.plugin.exception.InvalidPluginException;
-import codes.laivy.plugin.info.PluginInfo;
+import codes.laivy.plugin.PluginInfo;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

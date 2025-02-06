@@ -5,7 +5,7 @@ import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.factory.PluginFactory;
 import codes.laivy.plugin.factory.PluginFinder;
 import codes.laivy.plugin.factory.handlers.Handlers;
-import codes.laivy.plugin.info.PluginInfo;
+import codes.laivy.plugin.PluginInfo;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
