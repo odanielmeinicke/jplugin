@@ -8,7 +8,7 @@ Welcome to the **JPlugin Framework**! This framework is designed to simplify and
 2. [Installation](#installation)
 3. [Project Structure](#project-structure)
 4. [Annotations](#annotations)
-   - [@Plug-in](#plugin)
+   - [@Plugin](#plugin)
    - [@Initializer](#initializer)
    - [@Dependency](#dependency)
    - [@Category](#category)
@@ -21,8 +21,8 @@ Welcome to the **JPlugin Framework**! This framework is designed to simplify and
    - [Custom Initializer Example](#custom-initializer-example)
 7. [Considerations](#considerations)
 8. [Troubleshooting](#troubleshooting)
-   -[Common Issues](#common-issues)
-   -[Contributing](#contributing)
+   - [Common Issues](#common-issues)
+   - [Contributing](#contributing)
 9. [License](#license)
 
 ---
@@ -73,38 +73,23 @@ jplugin/
 │   │   ├── java/
 │   │   │   └── codes/
 │   │   │       └── laivy/
-│   │   │         └── plugin/
-│   │   │             ├── annotation/
-│   │   │             ├── category/
-│   │   │             ├── exception/
-│   │   │             ├── factory/
-│   │   │             ├── info/
-│   │   │             ├── initializer/
-│   │   │             └── main/
+│   │   │           └── plugin/
+│   │   │               ├── annotation/
+│   │   │               ├── category/
+│   │   │               ├── exception/
+│   │   │               ├── factory/
+│   │   │                   └── handlers/
+│   │   │               ├── info/
+│   │   │               ├── initializer/
+│   │   │               └── main/
 │   │   └── resources/
 │   └── test/
 │       └── java/
-│         └── codes/
-│             └── laivy/
-│               └── plugin/
+│           └── codes/
+│               └── laivy/
+│                   └── plugin/
 └── pom.xml
 ```
-
----
-
-## 🔍 Directory Explanation
-- `src/main/java`: Contains the Java source code for the framework and your plugins.
-- `src/main/resources`: Holds resource files like configuration files that plugins may need.
-- `src/test/java`: Contains unit tests for the framework and plugins, ensuring functionality and reliability.
-- `pom.xml`: Maven configuration file for managing dependencies and build configurations.
-
----
-
-## 🔧 Key Classes
-- PluginManager: Central class for managing plugin lifecycle events, loading, and unloading plugins.
-- PluginInitializer: Abstract class for creating custom initializers for plugins.
-- EventManager: Handles event registration and dispatching for plugins.
-- ConfigurationManager: Manages configuration files, providing an interface for reading and writing settings.
 
 ---
 
@@ -199,8 +184,7 @@ public class UtilityPlugin {
 
 ```java
 import codes.laivy.plugin.category.PluginHandler;
-import codes.laivy.plugin.exception.PluginInitializeException;
-import codes.laivy.plugin.info.PluginInfo;
+import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 
@@ -208,11 +192,11 @@ public static void main(String[] args) {
    Plugins.getHandlers("Utility").add(new PluginHandler() {
       @Override
       public void start(@NotNull PluginInfo info) {
-       System.out.println("The utility plugin '" + info + "' has been started.");
-       // Do cool stuff here for all Utility category plugins
+         System.out.println("The utility plugin '" + info + "' has been started.");
+         // Do cool stuff here for all Utility category plugins
       }
    });
-   
+
    // Initializes all the plugins (incluidng the UtilityPlugin)
    Plugins.initializeAll();
 }
@@ -332,7 +316,7 @@ final class Authentication extends Page {
 ```java
 import codes.laivy.plugin.category.PluginHandler;
 import codes.laivy.plugin.exception.PluginInitializeException;
-import codes.laivy.plugin.info.PluginInfo;
+import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 
@@ -355,11 +339,11 @@ private static final class HTTPPageHandler implements PluginHandler {
       // If a class with the 'HTTP Page' category but that doesn't extends the Page class
       // Tries to load, this method will be called. And if returned false, the loading will be interrupted.
       boolean allow = info.getReference().getSuperclass() == Page.class;
-      
+
       if (!allow) {
-       System.out.println("The class " + info.getReference().getName() + " is trying to load as HTTP Page but doesn't extends Page!");
+         System.out.println("The class " + info.getReference().getName() + " is trying to load as HTTP Page but doesn't extends Page!");
       }
-      
+
       return allow;
    }
 
