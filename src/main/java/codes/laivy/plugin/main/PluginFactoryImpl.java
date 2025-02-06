@@ -22,6 +22,9 @@ final class PluginFactoryImpl implements PluginFactory {
 
     public PluginFactoryImpl() {
         handlers.put(null, Handlers.create());
+
+        // Just to initialize Plugins class (shutdown hook)
+        Class<Plugins> reference = Plugins.class;
     }
 
     // Getters
