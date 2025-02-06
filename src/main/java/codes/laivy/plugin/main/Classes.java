@@ -1,14 +1,12 @@
 package codes.laivy.plugin.main;
 
-import codes.laivy.plugin.annotation.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.Opcodes;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
@@ -16,11 +14,10 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.file.Files;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -52,8 +49,7 @@ final class Classes {
 
         return buffer.toByteArray();
     }
-    public static @NotNull Map<@NotNull String, @NotNull InputStream> getAllPluginTypeClasses() throws IOException {
-        @NotNull Map<String, InputStream> classes = new HashMap<>();
+    public static void getAllTypeClassesWithVisitor(@NotNull BiConsumer<@NotNull String, @NotNull InputStream> consumer) throws IOException {
         @NotNull String home = System.getProperty("java.home");
 
         for (@NotNull String path : System.getProperty("java.class.path").split(File.pathSeparator)) {
@@ -64,12 +60,11 @@ final class Classes {
             @NotNull File file = new File(path);
 
             if (file.isDirectory()) {
-                findClassesInDirectory(file, "", classes);
+                findClassesInDirectory(file, "", consumer);
             } else if (file.getName().endsWith(".jar")) {
-                findClassesInJar(file, classes);
+                findClassesInJar(file, consumer);
             }
         }
-        return classes;
     }
     public static @NotNull Map<@NotNull String, @NotNull URL> read(@NotNull ClassLoader loader, @NotNull URL url) throws IOException {
         @NotNull Map<@NotNull String, @NotNull URL> map = new LinkedHashMap<>();
@@ -93,25 +88,7 @@ final class Classes {
 
     // Private utilities
 
-    private static boolean hasPluginType(byte[] bytecode) {
-        @NotNull String interfaceName = Plugin.class.getName().replace('.', '/');
-        @NotNull AtomicBoolean bool = new AtomicBoolean(false);
-
-        @NotNull ClassReader classReader = new ClassReader(bytecode);
-        classReader.accept(new ClassVisitor(Opcodes.ASM9) {
-            @Override
-            public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-                if (descriptor.contains(interfaceName)) {
-                    bool.set(true);
-                }
-
-                return super.visitAnnotation(descriptor, visible);
-            }
-        }, 0);
-
-        return bool.get();
-    }
-    private static void findClassesInDirectory(@NotNull File directory, @NotNull String packageName, @NotNull Map<@NotNull String, @NotNull InputStream> classes) throws IOException {
+    public static void findClassesInDirectory(@NotNull File directory, @NotNull String packageName, @NotNull BiConsumer<@NotNull String, @NotNull InputStream> consumer) throws IOException {
         // Retrieve directory files
         @NotNull File[] files = directory.listFiles();
         if (files == null) files = new File[0];
@@ -119,30 +96,28 @@ final class Classes {
         // Read all files
         for (@NotNull File file : files) {
             if (file.isDirectory()) {
-                findClassesInDirectory(file, packageName + file.getName() + ".", classes);
-            } else if (file.getName().endsWith(".class")) {
-                byte[] bytecode = toByteArray(Files.newInputStream(file.toPath()));
+                findClassesInDirectory(file, packageName + file.getName() + ".", consumer);
+            } else if (file.getName().endsWith(".class") && !file.getName().toLowerCase().endsWith("module-info.class")) {
+                @NotNull String name = packageName + file.getName().replace(".class", "");
 
-                if (hasPluginType(bytecode)) {
-                    @NotNull String name = packageName + file.getName().replace(".class", "");
-                    classes.put(name, Files.newInputStream(file.toPath()));
+                try (@NotNull InputStream stream = Files.newInputStream(file.toPath())) {
+                    consumer.accept(name, stream);
                 }
             }
         }
     }
-    private static void findClassesInJar(@NotNull File file, @NotNull Map<@NotNull String, @NotNull InputStream> classes) throws IOException {
+    public static void findClassesInJar(@NotNull File file, @NotNull BiConsumer<@NotNull String, @NotNull InputStream> consumer) throws IOException {
         try (@NotNull JarFile jar = new JarFile(file)) {
             @NotNull Enumeration<JarEntry> entries = jar.entries();
 
             while (entries.hasMoreElements()) {
                 @NotNull JarEntry entry = entries.nextElement();
 
-                if (entry.getName().endsWith(".class")) {
-                    byte[] bytecode = toByteArray(jar.getInputStream(entry));
+                if (entry.getName().endsWith(".class") && !entry.getName().toLowerCase().endsWith("module-info.class")) {
+                    @NotNull String name = entry.getName().replace("/", ".").replace(".class", "");
 
-                    if (hasPluginType(bytecode)) {
-                        @NotNull String name = entry.getName().replace("/", ".").replace(".class", "");
-                        classes.put(name, new ByteArrayInputStream(bytecode));
+                    try (@NotNull InputStream stream = jar.getInputStream(entry)) {
+                        consumer.accept(name, stream);
                     }
                 }
             }
