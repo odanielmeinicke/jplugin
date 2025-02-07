@@ -1,6 +1,5 @@
 package codes.laivy.plugin.factory.handlers;
 
-import codes.laivy.plugin.category.PluginHandler;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Iterator;

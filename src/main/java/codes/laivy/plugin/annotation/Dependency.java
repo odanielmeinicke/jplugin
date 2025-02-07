@@ -4,8 +4,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.*;
 
-import static codes.laivy.plugin.annotation.Dependency.Dependencies;
-
 /**
  * Specifies a dependency required by a plugin.
  * <p>
