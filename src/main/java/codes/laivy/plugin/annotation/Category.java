@@ -30,9 +30,9 @@ import java.lang.annotation.*;
  * <p>
  * <strong>Usage Example:</strong>
  * <pre>{@code
- * @Category(name = "Utility")
- * @Category(name = "Performance")
- * @Plugin(name = "MyPlugin", description = "A plugin that provides utility and performance enhancements")
+ * Category(name  = "Utility")
+ * Category(name  = "Performance")
+ * Plugin(name  = "MyPlugin", description = "A plugin that provides utility and performance enhancements")
  * public class MyPlugin {
  *     // Plugin implementation details
  * }

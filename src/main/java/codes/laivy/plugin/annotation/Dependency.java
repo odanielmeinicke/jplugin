@@ -19,9 +19,9 @@ import java.lang.annotation.*;
  * <p>
  * <strong>Example Usage:</strong>
  * <pre>{@code
- * &#064;Dependency(type = SomeLibrary.class)
- * &#064;Dependency(type = AnotherPlugin.class)
- * &#064;Plugin
+ * Dependency(type = SomeLibrary.class)
+ * Dependency(type = AnotherPlugin.class)
+ * Plugin
  * public class MyPlugin {
  *     // Plugin implementation
  * }
