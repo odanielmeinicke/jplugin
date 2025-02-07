@@ -1,7 +1,8 @@
 package codes.laivy.plugin.initializer;
 
-import codes.laivy.plugin.exception.InvalidPluginException;
 import codes.laivy.plugin.PluginInfo;
+import codes.laivy.plugin.category.PluginCategory;
+import codes.laivy.plugin.exception.InvalidPluginException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,18 +51,18 @@ public interface PluginInitializer {
      * @param dependencies An array of {@link PluginInfo} instances representing the dependencies
      *                     required by this plugin. This ensures proper dependency resolution
      *                     before the plugin is initialized.
-     * @param categories   An array of category tags that classify the plugin within the system.
-     *                     These tags help in organizing and filtering plugins based on their purpose.
-     * @return A fully constructed {@link PluginInfo} instance encapsulating the provided metadata
-     *         and initialization details.
+     * @param categories   An array of categories that classify the plugin within the system.
+     *                     These categories help in organizing and filtering plugins based on their purpose.
+     * @return A ready-to-construct {@link PluginInfo.Builder} instance encapsulating the provided metadata
+     *         and initialization details. The returned builder could be built using {@link PluginInfo.Builder#build()} at any moment.
      * @throws IllegalArgumentException If the provided class reference is invalid or does not conform
      *                                  to expected constraints.
      * @throws InvalidPluginException If an error occurs while processing dependencies or
      *                                       retrieving metadata.
      */
-    @NotNull PluginInfo create(@NotNull Class<?> reference,
-                               @Nullable String name,
-                               @Nullable String description,
-                               @NotNull PluginInfo @NotNull [] dependencies,
-                               @NotNull String @NotNull [] categories) throws InvalidPluginException;
+    @NotNull PluginInfo.Builder create(@NotNull Class<?> reference,
+                                       @Nullable String name,
+                                       @Nullable String description,
+                                       @NotNull PluginInfo @NotNull [] dependencies,
+                                       @NotNull PluginCategory @NotNull [] categories) throws InvalidPluginException;
 }

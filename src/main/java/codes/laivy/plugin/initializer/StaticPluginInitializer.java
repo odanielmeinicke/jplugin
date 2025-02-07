@@ -1,8 +1,10 @@
 package codes.laivy.plugin.initializer;
 
+import codes.laivy.plugin.PluginInfo;
+import codes.laivy.plugin.PluginInfo.Builder;
+import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
-import codes.laivy.plugin.PluginInfo;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,12 +41,12 @@ public final class StaticPluginInitializer implements PluginInitializer {
      * @param name         The plugin's name (nullable).
      * @param description  The plugin's description (nullable).
      * @param dependencies An array of required plugin dependencies.
-     * @param categories   An array of category tags associated with the plugin.
+     * @param categories   An array of categories associated with the plugin.
      * @return A {@link PluginInfo} instance containing the plugin's metadata and lifecycle management logic.
      */
     @Override
-    public @NotNull PluginInfo create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
-        return new PluginInfoImpl(reference, name, description, dependencies, categories);
+    public @NotNull Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories) {
+        return new BuilderImpl(reference, name, description, dependencies, categories);
     }
 
     // Classes
@@ -68,7 +70,7 @@ public final class StaticPluginInitializer implements PluginInitializer {
          * @param dependencies An array of plugin dependencies.
          * @param categories   An array of category tags.
          */
-        public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
+        public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories) {
             super(reference, name, description, dependencies, categories, StaticPluginInitializer.class);
         }
 
@@ -111,6 +113,28 @@ public final class StaticPluginInitializer implements PluginInitializer {
                 instance = null;
                 setState(State.IDLE);
             }
+        }
+
+    }
+    private static final class BuilderImpl extends AbstractPluginBuilder {
+
+        // Object
+
+        private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories) {
+            super(reference);
+
+            // Variables
+            name(name);
+            description(description);
+            dependencies(dependencies);
+            categories(categories);
+        }
+
+        // Modules
+
+        @Override
+        public @NotNull PluginInfo build() {
+            return new PluginInfoImpl(getReference(), getName(), getDescription(), getDependencies(), getCategories());
         }
 
     }

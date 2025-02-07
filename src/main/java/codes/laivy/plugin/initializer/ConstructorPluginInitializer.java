@@ -1,8 +1,9 @@
 package codes.laivy.plugin.initializer;
 
+import codes.laivy.plugin.PluginInfo;
+import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
-import codes.laivy.plugin.PluginInfo;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,12 +66,12 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
      * @return A fully constructed {@link PluginInfo} instance managing the initialization and shutdown lifecycle of the plugin.
      */
     @Override
-    public @NotNull PluginInfo create(@NotNull Class<?> reference,
+    public @NotNull PluginInfo.Builder create(@NotNull Class<?> reference,
                                       @Nullable String name,
                                       @Nullable String description,
                                       @NotNull PluginInfo @NotNull [] dependencies,
-                                      @NotNull String @NotNull [] categories) {
-        return new PluginInfoImpl(reference, name, description, dependencies, categories);
+                                      @NotNull PluginCategory @NotNull [] categories) {
+        return new BuilderImpl(reference, name, description, dependencies, categories);
     }
 
     /**
@@ -126,7 +127,7 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                               @Nullable String name,
                               @Nullable String description,
                               @NotNull PluginInfo @NotNull [] dependencies,
-                              @NotNull String @NotNull [] categories) {
+                              @NotNull PluginCategory @NotNull [] categories) {
             super(reference, name, description, dependencies, categories, ConstructorPluginInitializer.class);
         }
 
@@ -230,4 +231,27 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
             }
         }
     }
+    private static final class BuilderImpl extends AbstractPluginBuilder {
+
+        // Object
+
+        private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories) {
+            super(reference);
+
+            // Variables
+            name(name);
+            description(description);
+            dependencies(dependencies);
+            categories(categories);
+        }
+
+        // Modules
+
+        @Override
+        public @NotNull PluginInfo build() {
+            return new PluginInfoImpl(getReference(), getName(), getDescription(), getDependencies(), getCategories());
+        }
+
+    }
+
 }
