@@ -89,7 +89,7 @@ The @Plugin annotation marks a class as a plugin component managed by the framew
 
 Usage
 ```java
-@Plugin(name = "MyPlugin", description = "A sample plugin for demonstration purposes", version = "1.0.0")
+@Plugin(name = "MyPlugin", description = "A sample plugin for demonstration purposes")
 public class MyPlugin {
    public static void initialize() {
       System.out.println("MyPlugin has been enabled!");
@@ -171,7 +171,7 @@ public class UtilityPlugin {
 ```
 
 ```java
-import codes.laivy.plugin.category.PluginHandler;
+import codes.laivy.plugin.factory.handlers.PluginHandler;
 import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
@@ -235,7 +235,7 @@ public static void main(String[] args) {
 Here’s how to create a simple plug-in using the framework. This example will demonstrate the minimal setup required to get a plug-in running.
 
 ```java
-@Plugin(name = "HelloWorldPlugin", description = "A simple plug-in that greets users.", version = "1.0.0")
+@Plugin(name = "HelloWorldPlugin", description = "A simple plug-in that greets users.")
 public class HelloWorldPlugin {
    public static void initialize() {
       System.out.println("Hello, World!");
@@ -302,7 +302,7 @@ final class Authentication extends Page {
 ```
 
 ```java
-import codes.laivy.plugin.category.PluginHandler;
+import codes.laivy.plugin.factory.handlers.PluginHandler;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.main.Plugins;
