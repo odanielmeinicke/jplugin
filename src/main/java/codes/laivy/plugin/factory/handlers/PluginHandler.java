@@ -1,8 +1,8 @@
-package codes.laivy.plugin.category;
+package codes.laivy.plugin.factory.handlers;
 
+import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
-import codes.laivy.plugin.PluginInfo;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -20,13 +20,41 @@ public interface PluginHandler {
     /**
      * Invoked when a plugin is about to be created.
      * <p>
-     * This callback allows the handler to inspect the plugin's metadata and determine whether the plugin should be
-     * accepted (i.e., registered and subsequently started) or rejected. A return value of {@code true} indicates that
-     * the plugin meets the handler's criteria and will proceed through the lifecycle, while {@code false} will prevent
-     * the plugin from being registered and started.
+     * This callback allows a PluginHandler to inspect and potentially modify the builder that holds the
+     * plugin's metadata and configuration details. The builder, represented by {@link PluginInfo.Builder},
+     * encapsulates important properties such as the plugin's name, description, class reference, dependencies,
+     * initializer type, and other configurable options. Using this information, the handler can determine whether
+     * the plugin should be accepted (i.e., registered and subsequently started) or rejected.
+     * <p>
+     * A return value of {@code true} indicates that the plugin meets the handler's criteria and should proceed
+     * through the lifecycle, whereas {@code false} will prevent the plugin from being registered and started.
+     * This mechanism provides a hook for custom validations, logging, or preprocessing actions before the plugin is fully constructed.
      *
-     * @param info The {@link PluginInfo} instance containing metadata and state information about the plugin.
-     * @return {@code true} to accept and register the plugin, or {@code false} to reject it.
+     * @param builder the {@link PluginInfo.Builder} instance containing the metadata and state information
+     *                required to construct the PluginInfo object for the plugin.
+     * @return {@code true} to accept and register the plugin; {@code false} to reject it.
+     */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    default boolean accept(@NotNull PluginInfo.Builder builder) {
+        return true;
+    }
+
+    /**
+     * Invoked when dynamic modifications are applied to an existing PluginInfo instance.
+     * <p>
+     * This callback is intended for situations where changes are made to a PluginInfo that has already been created and registered,
+     * such as when adding or removing categories (e.g., using {@code pluginInfo.getCategories().add(category)}).
+     * <p>
+     * Unlike the builder-based {@link #accept(PluginInfo.Builder)} method, which is used during the initial creation
+     * of the plugin, this method is triggered to evaluate and approve dynamic alterations to the plugin's configuration
+     * at runtime. This provides a mechanism to enforce validation rules or perform custom processing whenever the plugin's state
+     * is modified after its creation.
+     * <p>
+     * A return value of {@code true} indicates that the dynamic modification is accepted and the change will be applied,
+     * whereas {@code false} will block the modification from being executed.
+     *
+     * @param info the existing {@link PluginInfo} instance that is being dynamically modified.
+     * @return {@code true} if the dynamic modification is accepted; {@code false} otherwise.
      */
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     default boolean accept(@NotNull PluginInfo info) {
