@@ -1,11 +1,11 @@
 package codes.laivy.plugin.main;
 
+import codes.laivy.plugin.PluginInfo;
+import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.factory.PluginFactory;
 import codes.laivy.plugin.factory.PluginFinder;
-import codes.laivy.plugin.factory.handlers.Handlers;
-import codes.laivy.plugin.PluginInfo;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -28,7 +28,7 @@ import java.util.Optional;
  * Key functionalities provided by this class include:
  * <ul>
  *   <li>Retrieving the current PluginFactory via {@link #getFactory()} and modifying it using {@link #setFactory(PluginFactory)}.</li>
- *   <li>Accessing plugin finders and handlers through methods like {@link #find()}, {@link #getHandlers()}, and {@link #getHandlers(String)}.</li>
+ *   <li>Accessing plugin finders and categories through methods like {@link #find()} and {@link #getCategory(String)}.</li>
  *   <li>Retrieving plugin metadata and instances using the {@link #retrieve(String)}, {@link #retrieve(Class)} and {@link #getInstance(Class)} methods.</li>
  *   <li>Performing plugin initialization and interruption using a variety of overloaded methods that accept
  *       different parameters such as ClassLoader, package name, and Package object.</li>
@@ -80,22 +80,42 @@ public final class Plugins {
     }
 
     /**
-     * Returns the global Handlers instance managing lifecycle event handlers for all plugins.
+     * Retrieves the PluginCategory corresponding to the specified name.
+     * <p>
+     * This method performs a case-insensitive lookup for a PluginCategory with the given name. If a category
+     * with that name already exists within the system, the existing instance is returned. Otherwise, if no such
+     * PluginCategory exists, a new instance is created using jplugin's default configuration settings.
+     * <p>
+     * The newly created category will automatically include the standard lifecycle event handlers and policies
+     * as defined by the framework. This ensures consistency across the system, as each category is uniquely defined
+     * and any subsequent calls to this method with the same name (ignoring case) will return the same PluginCategory
+     * instance.
+     * <p>
+     * In summary, this method either returns an existing PluginCategory or creates a new one with default configurations,
+     * depending on whether the specified category name has already been registered.
      *
-     * @return A Handlers collection.
+     * @param name the name of the category for which to retrieve the PluginCategory; must not be null. The lookup is case-insensitive.
+     * @return a non-null PluginCategory instance corresponding to the specified name, either newly created with default settings or the existing instance.
      */
-    public static @NotNull Handlers getHandlers() {
-        return getFactory().getHandlers();
+    public static @NotNull PluginCategory getCategory(@NotNull String name) {
+        return getFactory().getCategory(name);
     }
 
     /**
-     * Returns the Handlers instance associated with the specified category.
+     * Registers a custom PluginCategory instance.
+     * <p>
+     * This method allows developers to explicitly set a PluginCategory that they have customized, overriding
+     * the default configuration that would otherwise be provided by {@link #getCategory(String)}. When a custom
+     * PluginCategory is provided via this method, it is added to the system's category registry, and any subsequent
+     * requests for that category name will return the developer-defined instance rather than creating a new one.
+     * <p>
+     * This mechanism provides flexibility for cases where the default settings are insufficient or when specific
+     * customizations are required for a particular group of plugins.
      *
-     * @param category The category for which to retrieve handlers. Must not be null.
-     * @return A Handlers collection specific to the given category.
+     * @param category the custom PluginCategory instance to register; must not be null.
      */
-    public static @NotNull Handlers getHandlers(@NotNull String category) {
-        return getFactory().getHandlers(category);
+    public static void setCategory(@NotNull PluginCategory category) {
+        getFactory().setCategory(category);
     }
 
     /**
