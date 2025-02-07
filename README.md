@@ -88,16 +88,24 @@ The JPlugin Framework uses several key annotations to define the behavior of plu
 The @Plugin annotation marks a class as a plugin component managed by the framework. It is the primary annotation that provides essential metadata about the plugin.
 
 Usage
+
 ```java
+import java.io.Closeable;
+import java.io.IOException;
+
 @Plugin(name = "MyPlugin", description = "A sample plugin for demonstration purposes")
-public class MyPlugin {
-   public static void initialize() {
+public final class MyPlugin implements Closeable {
+
+   public MyPlugin() {
       System.out.println("MyPlugin has been enabled!");
    }
-   // Optional method
-   public static void interrupt() {
+   
+   @Override
+   public void close() {
       System.out.println("MyPlugin has been disabled!");
+      // The Closeable interface is optional!
    }
+   
 }
 ```
 
@@ -116,7 +124,7 @@ import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
 import java.io.Closeable;
 import java.io.IOException;
 
-@Initializer(type = ConstructorPluginInitializer.class)
+@Initializer(type = ConstructorPluginInitializer.class) // This is the default initializer!
 @Plugin(name = "Initializer Plug-in", description = "A plugin with a custom initializer.")
 public class InitializerPlugin implements Closeable {
    public InitializerPlugin() {
@@ -138,14 +146,20 @@ public class InitializerPlugin implements Closeable {
 The `@Dependency` annotation declares a required dependency for a plugin class. This is essential for ensuring that all necessary components are available before a plugin is loaded.
 
 Usage
+
 ```java
+import codes.laivy.plugin.annotation.Initializer;
+import codes.laivy.plugin.initializer.MethodPluginInitializer;
+
 @Dependency(type = SomeLibrary.class) // It can have multiples dependencies!
+@Initializer(type = MethodPluginInitializer.class)
 @Plugin(name = "LibraryDependentPlugin", description = "A plugin that uses SomeLibrary.")
 public class LibraryDependentPlugin {
    public static void initialize() {
       // This plugin only will be initialized when SomeLibrary has initialized.
       SomeLibrary.doSomething();
    }
+
    public static void interrupt() {
       // This plugin will be interrupted BEFORE the dependencies
    }
@@ -162,6 +176,7 @@ Usage
 
 ```java
 @Category(name = "Utility") // It can have multiples categories!
+@Initializer(type = MethodPluginInitializer.class)
 @Plugin(name = "Utility Plug-in", description = "A plugin that falls under the utility category.")
 public class UtilityPlugin {
    public static void initialize() {
@@ -177,7 +192,8 @@ import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 
 public static void main(String[] args) {
-   Plugins.getHandlers("Utility").add(new PluginHandler() {
+   // It will create a new category called 'Utility' and add a custom handler
+   Plugins.getCategory("Utility").getHandlers().add(new PluginHandler() {
       @Override
       public void start(@NotNull PluginInfo info) {
          System.out.println("The utility plugin '" + info + "' has been started.");
@@ -235,6 +251,7 @@ public static void main(String[] args) {
 Here’s how to create a simple plug-in using the framework. This example will demonstrate the minimal setup required to get a plug-in running.
 
 ```java
+@Initializer(type = MethodPluginInitializer.class)
 @Plugin(name = "HelloWorldPlugin", description = "A simple plug-in that greets users.")
 public class HelloWorldPlugin {
    public static void initialize() {
@@ -256,6 +273,7 @@ Let's create a plug-in that depends on an external library, ensuring that the re
  * First, it loads all the books (Book plug-in) before the bookshelf to control them.
  */
 @Dependency(type = Book.class)
+@Initializer(type = MethodPluginInitializer.class)
 @Plugin(name = "Bookshelf", description = "A mastered controller of the books")
 public class Bookshelf {
    public static void initialize() {
@@ -310,7 +328,7 @@ import org.jetbrains.annotations.NotNull;
 
 public static void main(String[] args) {
    // Create 'HTTP Page' category and add a plug-in handler to it
-   Plugins.getHandlers("HTTP Page").add(new HTTPPageHandler());
+   Plugins.getCategory("HTTP Page").getHandlers().add(new HTTPPageHandler());
 
    // Initialize all plug-ins at the "my.website.pages" package, recursively.
    Plugins.find().addPackage("my.website.pages", true).load();
@@ -322,16 +340,23 @@ public static void main(String[] args) {
 
 private static final class HTTPPageHandler implements PluginHandler {
    @Override
+   public boolean accept(@NotNull PluginInfo.Builder builder) {
+       return checkReference(builder.getReference());
+   }
+   @Override // Take a read at the javadocs to know the difference between those two methods!
    public boolean accept(@NotNull PluginInfo info) {
+       return checkReference(info.getReference());
+   }
+   
+   public boolean checkReference(@NotNull Class<?> reference) {
       // Check if the class extends Page
       // If a class with the 'HTTP Page' category but that doesn't extends the Page class
       // Tries to load, this method will be called. And if returned false, the loading will be interrupted.
       boolean allow = info.getReference().getSuperclass() == Page.class;
-
       if (!allow) {
-         System.out.println("The class " + info.getReference().getName() + " is trying to load as HTTP Page but doesn't extends Page!");
+         System.out.println("The class " + builder.getReference().getName() + " is trying to load as HTTP Page but doesn't extends Page!");
       }
-
+      
       return allow;
    }
 
@@ -356,6 +381,9 @@ The plug-in has advanced features that allows developers enhance the power of th
 You can define custom initialization logic for your plug-in using an initializer, allowing for more complex setup procedures.
 
 ```java
+import codes.laivy.plugin.PluginInfo;
+import codes.laivy.plugin.category.PluginCategory;
+
 public final class MyPluginInitializer extends PluginInitializer {
 
    // Every plug-in initializer *MUST* have an empty declared constructor like that.
@@ -363,12 +391,12 @@ public final class MyPluginInitializer extends PluginInitializer {
    }
 
    @Override
-   public @NotNull PluginInfo create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
-      // Creates a PluginInfo with your own initialization mechanic here (custom #start and #stop methods)
+   public @NotNull PluginInfo.Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories) {
+      // Creates a PluginInfo.Builder with your own initialization mechanic here (custom #build method)
    }
-   
+
 }
-   
+
 ```
 
 ```java
