@@ -1,7 +1,8 @@
 package codes.laivy.plugin.factory;
 
-import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.PluginInfo;
+import codes.laivy.plugin.category.PluginCategory;
+import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.initializer.PluginInitializer;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -41,7 +42,6 @@ public interface PluginFinder {
      * @param loaders One or more ClassLoader objects to include.
      * @return This PluginFinder instance with the updated class loader filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder classLoaders(@NotNull ClassLoader @NotNull ... loaders);
 
     /**
@@ -50,25 +50,36 @@ public interface PluginFinder {
      * @param loader The ClassLoader to add.
      * @return This PluginFinder instance with the added ClassLoader.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addClassLoader(@NotNull ClassLoader loader);
 
+    /**
+     * Filters the search to include only plugins that belong to the specified categories.
+     *
+     * @param categories One or more category instances to filter by.
+     * @return This PluginFinder instance with the updated category filter.
+     */
+    @NotNull PluginFinder categories(@NotNull PluginCategory @NotNull ... categories);
     /**
      * Filters the search to include only plugins that belong to the specified categories.
      *
      * @param categories One or more category names to filter by.
      * @return This PluginFinder instance with the updated category filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder categories(@NotNull String @NotNull ... categories);
 
+    /**
+     * Adds a single category to the filter criteria.
+     *
+     * @param category The category instance to add.
+     * @return This PluginFinder instance with the added category.
+     */
+    @NotNull PluginFinder addCategory(@NotNull PluginCategory category);
     /**
      * Adds a single category to the filter criteria.
      *
      * @param category The category name to add.
      * @return This PluginFinder instance with the added category.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addCategory(@NotNull String category);
 
     /**
@@ -77,7 +88,6 @@ public interface PluginFinder {
      * @param packages One or more Package objects to filter by.
      * @return This PluginFinder instance with the updated package filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder packages(@NotNull Package @NotNull ... packages);
 
     /**
@@ -86,7 +96,6 @@ public interface PluginFinder {
      * @param packages One or more package names to filter by.
      * @return This PluginFinder instance with the updated package filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder packages(@NotNull String @NotNull ... packages);
 
     /**
@@ -95,7 +104,6 @@ public interface PluginFinder {
      * @param packge The package name to add.
      * @return This PluginFinder instance with the package added.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addPackage(@NotNull String packge);
 
     /**
@@ -114,7 +122,6 @@ public interface PluginFinder {
      * @param packge The Package to add.
      * @return This PluginFinder instance with the package added.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addPackage(@NotNull Package packge);
 
     /**
@@ -133,7 +140,6 @@ public interface PluginFinder {
      * @param initializers An array of PluginInitializer classes to filter by.
      * @return This PluginFinder instance with the updated initializer filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder initializers(@NotNull Class<? extends PluginInitializer> @NotNull [] initializers);
 
     /**
@@ -142,7 +148,6 @@ public interface PluginFinder {
      * @param initializer The PluginInitializer class to filter by.
      * @return This PluginFinder instance with the updated initializer filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder initializer(@NotNull Class<? extends PluginInitializer> initializer);
 
     /**
@@ -151,7 +156,6 @@ public interface PluginFinder {
      * @param initializer The PluginInitializer class to add.
      * @return This PluginFinder instance with the initializer added.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addInitializer(@NotNull Class<? extends PluginInitializer> initializer);
 
     /**
@@ -160,7 +164,6 @@ public interface PluginFinder {
      * @param names One or more plugin names to filter by.
      * @return This PluginFinder instance with the updated name filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder names(@NotNull String @NotNull ... names);
 
     /**
@@ -169,7 +172,6 @@ public interface PluginFinder {
      * @param name The plugin name to add.
      * @return This PluginFinder instance with the name added.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addName(@NotNull String name);
 
     /**
@@ -178,7 +180,6 @@ public interface PluginFinder {
      * @param descriptions One or more plugin descriptions to filter by.
      * @return This PluginFinder instance with the updated description filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder descriptions(@NotNull String @NotNull ... descriptions);
 
     /**
@@ -187,7 +188,6 @@ public interface PluginFinder {
      * @param description The plugin description to add.
      * @return This PluginFinder instance with the description added.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addDescription(@NotNull String description);
 
     /**
@@ -196,7 +196,6 @@ public interface PluginFinder {
      * @param dependencies One or more Class objects representing dependencies.
      * @return This PluginFinder instance with the updated dependency filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder dependencies(@NotNull Class<?> @NotNull ... dependencies);
 
     /**
@@ -205,7 +204,6 @@ public interface PluginFinder {
      * @param dependencies One or more PluginInfo objects representing dependencies.
      * @return This PluginFinder instance with the updated dependency filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder dependencies(@NotNull PluginInfo @NotNull ... dependencies);
 
     /**
@@ -214,7 +212,6 @@ public interface PluginFinder {
      * @param dependency The Class representing a dependency to add.
      * @return This PluginFinder instance with the dependency added.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addDependency(@NotNull Class<?> dependency);
 
     /**
@@ -223,7 +220,6 @@ public interface PluginFinder {
      * @param dependency The PluginInfo representing a dependency to add.
      * @return This PluginFinder instance with the dependency added.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addDependency(@NotNull PluginInfo dependency);
 
     /**
@@ -232,7 +228,6 @@ public interface PluginFinder {
      * @param dependants One or more Class objects representing dependant plugins.
      * @return This PluginFinder instance with the updated dependant filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder dependants(@NotNull Class<?> @NotNull ... dependants);
 
     /**
@@ -241,7 +236,6 @@ public interface PluginFinder {
      * @param dependants One or more PluginInfo objects representing dependant plugins.
      * @return This PluginFinder instance with the updated dependant filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder dependants(@NotNull PluginInfo @NotNull ... dependants);
 
     /**
@@ -250,7 +244,6 @@ public interface PluginFinder {
      * @param dependant The Class representing a dependant plugin.
      * @return This PluginFinder instance with the dependant added.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addDependant(@NotNull Class<?> dependant);
 
     /**
@@ -259,7 +252,6 @@ public interface PluginFinder {
      * @param dependant The PluginInfo representing a dependant plugin.
      * @return This PluginFinder instance with the dependant added.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addDependant(@NotNull PluginInfo dependant);
 
     /**
@@ -268,7 +260,6 @@ public interface PluginFinder {
      * @param instances One or more objects representing expected plugin instances.
      * @return This PluginFinder instance with the updated instance filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder instances(@NotNull Object @NotNull ... instances);
 
     /**
@@ -277,7 +268,6 @@ public interface PluginFinder {
      * @param instance The plugin instance to add.
      * @return This PluginFinder instance with the instance filter updated.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addInstance(@NotNull Object instance);
 
     /**
@@ -286,7 +276,6 @@ public interface PluginFinder {
      * @param states One or more PluginInfo.State values to filter by.
      * @return This PluginFinder instance with the updated state filter.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder states(@NotNull PluginInfo.State @NotNull ... states);
 
     /**
@@ -295,7 +284,6 @@ public interface PluginFinder {
      * @param state The PluginInfo.State to add.
      * @return This PluginFinder instance with the state filter updated.
      */
-    @Contract(value = "_->this")
     @NotNull PluginFinder addState(@NotNull PluginInfo.State state);
 
     /**

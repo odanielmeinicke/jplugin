@@ -1,15 +1,16 @@
 package codes.laivy.plugin.main;
 
+import codes.laivy.plugin.PluginInfo;
+import codes.laivy.plugin.PluginInfo.State;
 import codes.laivy.plugin.annotation.Category;
 import codes.laivy.plugin.annotation.Dependency;
 import codes.laivy.plugin.annotation.Initializer;
 import codes.laivy.plugin.annotation.Plugin;
-import codes.laivy.plugin.category.PluginHandler;
+import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.InvalidPluginException;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.factory.PluginFinder;
-import codes.laivy.plugin.PluginInfo;
-import codes.laivy.plugin.PluginInfo.State;
+import codes.laivy.plugin.factory.handlers.PluginHandler;
 import codes.laivy.plugin.initializer.MethodPluginInitializer;
 import codes.laivy.plugin.initializer.PluginInitializer;
 import org.jetbrains.annotations.NotNull;
@@ -39,7 +40,7 @@ final class PluginFinderImpl implements PluginFinder {
     private final @NotNull PluginFactoryImpl factory;
 
     private final @NotNull Set<ClassLoader> classLoaders = new HashSet<>();
-    private final @NotNull Set<String> categories = new HashSet<>();
+    private final @NotNull Set<PluginCategory> categories = new HashSet<>();
     private final @NotNull Map<String, Boolean> packages = new HashMap<>();
     private final @NotNull Set<Class<? extends PluginInitializer>> initializers = new HashSet<>();
     private final @NotNull Set<String> names = new HashSet<>();
@@ -74,16 +75,28 @@ final class PluginFinderImpl implements PluginFinder {
     // Categories
 
     @Override
-    public @NotNull PluginFinder categories(@NotNull String @NotNull ... categories) {
+    public @NotNull PluginFinder categories(@NotNull PluginCategory @NotNull ... categories) {
         this.categories.clear();
         this.categories.addAll(Arrays.asList(categories));
 
         return this;
     }
+    @Override
+    public @NotNull PluginFinder categories(@NotNull String @NotNull ... categories) {
+        this.categories.clear();
+        this.categories.addAll(Arrays.stream(categories).map(Plugins::getCategory).collect(Collectors.toSet()));
+
+        return this;
+    }
 
     @Override
-    public @NotNull PluginFinder addCategory(@NotNull String category) {
+    public @NotNull PluginFinder addCategory(@NotNull PluginCategory category) {
         categories.add(category);
+        return this;
+    }
+    @Override
+    public @NotNull PluginFinder addCategory(@NotNull String category) {
+        categories.add(Plugins.getCategory(category));
         return this;
     }
 
@@ -509,21 +522,27 @@ final class PluginFinderImpl implements PluginFinder {
             if (description.isEmpty()) description = null;
 
             // Categories
-            @NotNull Set<String> categories = new LinkedHashSet<>();
+            @NotNull Set<PluginCategory> categories = new LinkedHashSet<>();
             for (@NotNull Category category : reference.getAnnotationsByType(Category.class)) {
-                categories.add(category.name());
+                categories.add(Plugins.getCategory(category.name()));
             }
 
             // Create instance and register it
-            @NotNull PluginInfo plugin = initializer.create(reference, name, description, dependencies.toArray(new PluginInfo[0]), categories.toArray(new String[0]));
+            @NotNull PluginInfo.Builder builder = initializer.create(reference, name, description, dependencies.toArray(new PluginInfo[0]), categories.toArray(new PluginCategory[0]));
 
             // Call Handlers
             {
                 // Category handlers
-                for (@NotNull String category : categories) {
-                    for (@NotNull PluginHandler handler : Plugins.getFactory().getHandlers(category)) {
+                for (@NotNull PluginCategory category : categories) {
+                    // Category native handler
+                    if (!category.accept(builder)) {
+                        continue main;
+                    }
+
+                    // Handlers
+                    for (@NotNull PluginHandler handler : category.getHandlers()) {
                         try {
-                            if (!handler.accept(plugin)) {
+                            if (!handler.accept(builder)) {
                                 continue main;
                             }
                         } catch (@NotNull Throwable throwable) {
@@ -531,18 +550,10 @@ final class PluginFinderImpl implements PluginFinder {
                         }
                     }
                 }
-
-                // Global handlers
-                for (@NotNull PluginHandler handler : Plugins.getFactory().getHandlers()) {
-                    try {
-                        if (!handler.accept(plugin)) {
-                            continue main;
-                        }
-                    } catch (@NotNull Throwable throwable) {
-                        throw new RuntimeException("cannot invoke global handler to accept '" + name + "': " + handler);
-                    }
-                }
             }
+
+            // Build
+            @NotNull PluginInfo plugin = builder.build();
 
             // Register it
             factory.plugins.put(reference, plugin);
