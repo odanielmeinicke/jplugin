@@ -11,7 +11,7 @@ import codes.laivy.plugin.exception.InvalidPluginException;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.factory.PluginFinder;
 import codes.laivy.plugin.factory.handlers.PluginHandler;
-import codes.laivy.plugin.initializer.MethodPluginInitializer;
+import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
 import codes.laivy.plugin.initializer.PluginInitializer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -326,7 +326,7 @@ final class PluginFinderImpl implements PluginFinder {
         @NotNull ClassLoader classLoader = reference.getClassLoader();
         @NotNull Set<String> categories = Arrays.stream(reference.getAnnotationsByType(Category.class)).map(Category::name).distinct().collect(Collectors.toSet());
         @NotNull String packge = reference.getPackage().getName();
-        @NotNull Class<? extends PluginInitializer> initializer = reference.isAnnotationPresent(Initializer.class) ? reference.getAnnotation(Initializer.class).type() : MethodPluginInitializer.class;
+        @NotNull Class<? extends PluginInitializer> initializer = reference.isAnnotationPresent(Initializer.class) ? reference.getAnnotation(Initializer.class).type() : ConstructorPluginInitializer.class;
         @NotNull String name = reference.getAnnotation(Plugin.class).name();
         @NotNull String description = reference.getAnnotation(Plugin.class).description();
         @NotNull Set<Class<?>> dependencies = Arrays.stream(reference.getAnnotationsByType(Dependency.class)).map(Dependency::type).collect(Collectors.toSet());
@@ -472,7 +472,7 @@ final class PluginFinderImpl implements PluginFinder {
 
             {
                 // Plugin loader class
-                @NotNull Class<? extends PluginInitializer> loaderClass = MethodPluginInitializer.class;
+                @NotNull Class<? extends PluginInitializer> loaderClass = ConstructorPluginInitializer.class;
                 if (reference.isAnnotationPresent(Initializer.class)) {
                     loaderClass = reference.getAnnotation(Initializer.class).type();
                 }

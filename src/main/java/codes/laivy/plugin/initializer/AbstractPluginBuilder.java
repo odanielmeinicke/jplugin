@@ -21,7 +21,7 @@ abstract class AbstractPluginBuilder implements Builder {
 
     private @Nullable String name;
     private @Nullable String description;
-    private @NotNull Class<? extends PluginInitializer> initializer = MethodPluginInitializer.class;
+    private @NotNull Class<? extends PluginInitializer> initializer = ConstructorPluginInitializer.class;
 
     private final @NotNull Set<PluginCategory> categories = new LinkedHashSet<>();
     private final @NotNull Set<PluginInfo> dependencies = new LinkedHashSet<>();
