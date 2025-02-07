@@ -1,11 +1,12 @@
 package codes.laivy.plugin.main;
 
+import codes.laivy.plugin.PluginInfo;
+import codes.laivy.plugin.category.AbstractPluginCategory;
+import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.factory.PluginFactory;
 import codes.laivy.plugin.factory.PluginFinder;
-import codes.laivy.plugin.factory.handlers.Handlers;
-import codes.laivy.plugin.PluginInfo;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -17,12 +18,10 @@ final class PluginFactoryImpl implements PluginFactory {
 
     // Object
 
-    private final @NotNull Map<String, Handlers> handlers = new HashMap<>();
+    private final @NotNull Map<String, PluginCategory> categories = new HashMap<>();
     final @NotNull Map<Class<?>, PluginInfo> plugins = new LinkedHashMap<>();
 
     public PluginFactoryImpl() {
-        handlers.put(null, Handlers.create());
-
         // Just to initialize Plugins class (shutdown hook)
         Class<Plugins> reference = Plugins.class;
     }
@@ -41,12 +40,12 @@ final class PluginFactoryImpl implements PluginFactory {
     // Handlers
 
     @Override
-    public @NotNull Handlers getHandlers() {
-        return handlers.get(null);
+    public @NotNull PluginCategory getCategory(@NotNull String name) {
+        return categories.computeIfAbsent(name, k -> new AbstractPluginCategory(name) {});
     }
     @Override
-    public @NotNull Handlers getHandlers(@NotNull String category) {
-        return handlers.computeIfAbsent(category, k -> Handlers.create());
+    public void setCategory(@NotNull PluginCategory category) {
+        categories.put(category.getName(), category);
     }
 
     // Instances

@@ -1,12 +1,11 @@
 package codes.laivy.plugin;
 
-import codes.laivy.plugin.annotation.Category;
-import codes.laivy.plugin.category.PluginHandler;
+import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.factory.handlers.Handlers;
+import codes.laivy.plugin.factory.handlers.PluginHandler;
 import codes.laivy.plugin.initializer.PluginInitializer;
-import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
@@ -101,9 +100,9 @@ public abstract class PluginInfo {
     public final @NotNull Set<@NotNull PluginInfo> dependants = new LinkedHashSet<>();
 
     /**
-     * A set of category names associated with the plugin, used for grouping or filtering.
+     * A set of category associated with the plugin, used for grouping or filtering.
      */
-    private final @NotNull Set<String> categories;
+    private final @NotNull Set<PluginCategory> categories;
 
     /**
      * The class of the PluginInitializer that is responsible for initializing this plugin.
@@ -138,7 +137,7 @@ public abstract class PluginInfo {
      * @param initializer  The PluginInitializer class responsible for initializing the plugin.
      */
     public PluginInfo(@NotNull Class<?> reference, @Nullable String name, @Nullable String description,
-                      @NotNull PluginInfo @NotNull [] dependencies, @NotNull String @NotNull [] categories,
+                      @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories,
                       @NotNull Class<? extends PluginInitializer> initializer) {
         this.name = name;
         this.description = description;
@@ -216,11 +215,11 @@ public abstract class PluginInfo {
     }
 
     /**
-     * Returns the set of category names associated with the plugin.
+     * Returns the set of category associated with the plugin.
      *
      * @return A collection of category strings.
      */
-    public @NotNull Collection<String> getCategories() {
+    public @NotNull Collection<PluginCategory> getCategories() {
         return categories;
     }
 
@@ -411,32 +410,24 @@ public abstract class PluginInfo {
                 throw new RuntimeException("cannot invoke plugin's handler to " + action + " '" + this + "': " + handler);
             }
         }
+
         // Invoke category handlers.
-        for (@NotNull Category category : getReference().getAnnotationsByType(Category.class)) {
-            @NotNull String name = category.name();
-            for (@NotNull PluginHandler handler : Plugins.getFactory().getHandlers(name)) {
+        for (@NotNull PluginCategory category : getCategories()) {
+            try {
+                consumer.accept(category);
+            } catch (@NotNull Throwable throwable) {
+                throw new RuntimeException("cannot invoke category main handler to " + action + " '" + this + "': " + category);
+            }
+
+            for (@NotNull PluginHandler handler : category.getHandlers()) {
                 try {
                     consumer.accept(handler);
                 } catch (@NotNull Throwable throwable) {
-                    throw new RuntimeException("cannot invoke category's handler to " + action + " '" + this + "': " + handler);
+                    throw new RuntimeException("cannot invoke category's handler list to " + action + " '" + this + "': " + handler);
                 }
             }
         }
-        // Invoke global handlers.
-        for (@NotNull PluginHandler handler : Plugins.getFactory().getHandlers()) {
-            try {
-                consumer.accept(handler);
-            } catch (@NotNull Throwable throwable) {
-                throw new RuntimeException("cannot invoke global handler to " + action + " '" + this + "': " + handler);
-            }
-        }
     }
-
-    /**
-     * A functional interface representing an operation that accepts a single input and may throw an exception.
-     *
-     * @param <T> the type of the input to the operation
-     */
     @FunctionalInterface
     private interface ThrowingConsumer<T> {
         /**
@@ -447,4 +438,230 @@ public abstract class PluginInfo {
          */
         void accept(T t) throws Throwable;
     }
+
+    // Classes
+
+    /**
+     * A fluent builder interface for constructing a {@link PluginInfo} instance.
+     * <p>
+     * This interface provides methods to configure all the necessary properties of a plugin,
+     * such as its name, description, class reference, dependencies, initializer, and associated handlers.
+     * The builder follows a fluent API design, allowing for method chaining and incremental configuration.
+     * <p>
+     * Usage Example:
+     * <pre>{@code
+     * PluginInfo info = PluginInfo.builder()
+     *     .name("Example Plugin")
+     *     .description("A plugin for demonstration purposes")
+     *     .reference(ExamplePlugin.class)
+     *     .dependencies(DependencyA.class, DependencyB.class)
+     *     .initializer(ExamplePluginInitializer.class)
+     *     .category("Economy")
+     *     .categories("Utility", "Fun")
+     *     .build();
+     * }</pre>
+     * <p>
+     * The builder exposes getter methods to retrieve the current configuration values and
+     * setter methods to modify these values.
+     */
+    public interface Builder {
+
+        // Getters
+
+        /**
+         * Returns the configured name of the plugin.
+         *
+         * @return A non-null string representing the plugin's name.
+         */
+        @Nullable String getName();
+
+        /**
+         * Returns the configured description of the plugin.
+         *
+         * @return A non-null string representing the plugin's description.
+         */
+        @Nullable String getDescription();
+
+        /**
+         * Returns the class reference of the plugin being built.
+         *
+         * @return The non-null Class object representing the plugin.
+         */
+        @NotNull Class<?> getReference();
+
+        /**
+         * Returns an array of plugin instances the plugin depends on.
+         *
+         * @return A non-null array of plugin infos objects that the plugin depends on.
+         */
+        @NotNull PluginInfo @NotNull [] getDependencies();
+        /**
+         * Returns an array of classes representing the categories of the plugin.
+         *
+         * @return A non-null array of PluginCategory objects of the plugin categories.
+         */
+        @NotNull PluginCategory @NotNull [] getCategories();
+
+        /**
+         * Returns the {@link PluginInitializer} type configured for initializing the plugin.
+         *
+         * @return A non-null Class object extending PluginInitializer.
+         */
+        @NotNull Class<? extends PluginInitializer> getInitializer();
+
+        /**
+         * Returns the collection of {@link PluginHandler} instances associated with the plugin.
+         *
+         * @return A non-null Handlers instance.
+         */
+        @NotNull Handlers getHandlers();
+
+        // Setters
+
+        /**
+         * Sets the name for the plugin.
+         *
+         * @param name A non-null string representing the plugin's name.
+         * @return This Builder instance for chaining.
+         */
+        @NotNull Builder name(@Nullable String name);
+
+        /**
+         * Sets the description for the plugin.
+         *
+         * @param description A non-null string representing the plugin's description.
+         * @return This Builder instance for chaining.
+         */
+        @NotNull Builder description(@Nullable String description);
+
+        /**
+         * Adds a single category to the plugin's list of categories.
+         *
+         * @param category A non-null category.
+         * @return This Builder instance for chaining.
+         */
+        @NotNull Builder category(@NotNull PluginCategory category);
+
+        /**
+         * Adds multiple categories to the plugin's list of categories.
+         *
+         * @param categories An array of non-null categories.
+         * @return This Builder instance for chaining.
+         */
+        @NotNull Builder categories(@NotNull PluginCategory @NotNull ... categories);
+
+        /**
+         * Adds a single dependency to the plugin's list of dependencies.
+         *
+         * @param dependency A non-null dependency.
+         * @return This Builder instance for chaining.
+         */
+        @NotNull Builder dependency(@NotNull Class<?> dependency);
+        /**
+         * Adds a single dependency to the plugin's list of dependencies.
+         *
+         * @param dependency A non-null dependency.
+         * @return This Builder instance for chaining.
+         */
+        @NotNull Builder dependency(@NotNull PluginInfo dependency);
+
+        /**
+         * Sets the dependencies of the plugin.
+         *
+         * @param dependencies An array of non-null Class objects that the plugin depends on.
+         * @return This Builder instance for chaining.
+         */
+        @NotNull Builder dependencies(@NotNull Class<?> @NotNull ... dependencies);
+        /**
+         * Sets the dependencies of the plugin.
+         *
+         * @param dependencies An array of non-null plugin info objects that the plugin depends on.
+         * @return This Builder instance for chaining.
+         */
+        @NotNull Builder dependencies(@NotNull PluginInfo @NotNull ... dependencies);
+
+        /**
+         * Sets the {@link PluginInitializer} to be used for initializing the plugin.
+         *
+         * @param initializer A non-null Class object extending PluginInitializer.
+         * @return This Builder instance for chaining.
+         */
+        @NotNull Builder initializer(@NotNull Class<? extends PluginInitializer> initializer);
+
+        /**
+         * Builds and returns a fully configured {@link PluginInfo} instance.
+         * <p>
+         * This method finalizes the builder configuration and constructs a {@link PluginInfo}
+         * object with all the specified parameters. Once built, further modifications to the
+         * builder instance will not affect the created {@link PluginInfo} instance.
+         *
+         * @return A new {@link PluginInfo} instance containing the configured properties.
+         */
+        @NotNull PluginInfo build();
+
+    }
+    private final class Categories extends AbstractSet<PluginCategory> {
+
+        // Object
+
+        private final @NotNull Set<PluginCategory> shade;
+
+        public Categories(@NotNull Set<PluginCategory> shade) {
+            this.shade = shade;
+        }
+
+        // Modules
+
+        @Override
+        public boolean add(@NotNull PluginCategory category) {
+            if (shade.contains(category)) {
+                return false;
+            }
+
+            // Invoke plugin-specific handlers.
+            for (@NotNull PluginHandler handler : getHandlers()) {
+                try {
+                    if (!handler.accept(PluginInfo.this)) {
+                        return false;
+                    }
+                } catch (@NotNull Throwable throwable) {
+                    throw new RuntimeException("cannot invoke plugin's handler to add plugin '" + this + "': " + handler);
+                }
+            }
+
+            // Invoke category handlers.
+            try {
+                if (!category.accept(PluginInfo.this)) {
+                    return false;
+                }
+            } catch (@NotNull Throwable throwable) {
+                throw new RuntimeException("cannot invoke category main handler to add plugin '" + this + "': " + category);
+            }
+
+            for (@NotNull PluginHandler handler : category.getHandlers()) {
+                try {
+                    if (!handler.accept(PluginInfo.this)) {
+                        return false;
+                    }
+                } catch (@NotNull Throwable throwable) {
+                    throw new RuntimeException("cannot invoke category's handler list to add plugin '" + this + "': " + handler);
+                }
+            }
+
+            return shade.add(category);
+        }
+
+        // Iterators and size
+
+        @Override
+        public @NotNull Iterator<@NotNull PluginCategory> iterator() {
+            return shade.iterator();
+        }
+        @Override
+        public int size() {
+            return shade.size();
+        }
+
+    }
+
 }
