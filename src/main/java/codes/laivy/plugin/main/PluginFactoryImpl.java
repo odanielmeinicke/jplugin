@@ -7,6 +7,8 @@ import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.factory.PluginFactory;
 import codes.laivy.plugin.factory.PluginFinder;
+import codes.laivy.plugin.factory.handlers.PluginHandler;
+import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -24,6 +26,9 @@ final class PluginFactoryImpl implements PluginFactory {
     public PluginFactoryImpl() {
         // Just to initialize Plugins class (shutdown hook)
         Class<Plugins> reference = Plugins.class;
+
+        // Default categories
+        setCategory(new AutoRegisterPluginCategory());
     }
 
     // Getters
@@ -176,6 +181,81 @@ final class PluginFactoryImpl implements PluginFactory {
     @Override
     public @NotNull Stream<PluginInfo> stream() {
         return plugins.values().stream();
+    }
+
+    // Classes
+
+    private final class AutoRegisterPluginCategory extends AbstractPluginCategory {
+
+        // Object
+
+        private AutoRegisterPluginCategory() {
+            super("Category Reference");
+        }
+
+        // Modules
+
+        @Override
+        public boolean accept(PluginInfo.@NotNull Builder builder) {
+            builder.initializer(ConstructorPluginInitializer.class);
+            builder.getHandlers().add(new HandlerImpl(builder.getReference()));
+
+            return PluginCategory.class.isAssignableFrom(builder.getReference());
+        }
+        @Override
+        public boolean accept(@NotNull PluginInfo info) {
+            info.getHandlers().add(new HandlerImpl(info.getReference()));
+            return info.getInstance() instanceof PluginCategory;
+        }
+
+        @Override
+        public void start(@NotNull PluginInfo info) throws PluginInitializeException {
+            if (!(info.getInstance() instanceof PluginCategory)) {
+                throw new PluginInitializeException(info.getReference(), "the 'Category Reference' plugin doesn't have a plugin category instance: " + info.getInstance());
+            }
+
+            @NotNull PluginCategory category = (PluginCategory) info.getInstance();
+            categories.put(category.getName(), category);
+        }
+        @Override
+        public void close(@NotNull PluginInfo info) throws PluginInterruptException {
+            if (!(info.getInstance() instanceof PluginCategory)) {
+                throw new PluginInterruptException(info.getReference(), "the 'Category Reference' plugin doesn't have the plugin category instance: " + info.getInstance());
+            }
+
+            @NotNull PluginCategory category = (PluginCategory) info.getInstance();
+
+            category.getPlugins().clear();
+            categories.remove(category.getName());
+        }
+
+        // Classes
+
+        private final class HandlerImpl implements PluginHandler {
+
+            // Object
+
+            private final @NotNull Class<?> category;
+
+            private HandlerImpl(@NotNull Class<?> category) {
+                this.category = category;
+            }
+
+            // Modules
+
+            @Override
+            public boolean accept(PluginInfo.@NotNull Builder builder) {
+                builder.dependency(category);
+                return PluginHandler.super.accept(builder);
+            }
+            @Override
+            public boolean accept(@NotNull PluginInfo info) {
+                info.getDependencies().remove(Plugins.retrieve(category));
+                return PluginHandler.super.accept(info);
+            }
+
+        }
+
     }
 
 }
