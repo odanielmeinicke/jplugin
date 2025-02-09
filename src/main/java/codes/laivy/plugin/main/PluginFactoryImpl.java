@@ -197,15 +197,24 @@ final class PluginFactoryImpl implements PluginFactory {
 
         @Override
         public boolean accept(PluginInfo.@NotNull Builder builder) {
-            builder.initializer(ConstructorPluginInitializer.class);
-            builder.getHandlers().add(new HandlerImpl(builder.getReference()));
+            if (PluginCategory.class.isAssignableFrom(builder.getReference())) {
+                builder.initializer(ConstructorPluginInitializer.class);
+                builder.getHandlers().add(new HandlerImpl(builder.getReference()));
 
-            return PluginCategory.class.isAssignableFrom(builder.getReference());
+                return true;
+            }
+
+            return false;
         }
         @Override
         public boolean accept(@NotNull PluginInfo info) {
-            info.getHandlers().add(new HandlerImpl(info.getReference()));
-            return info.getInstance() instanceof PluginCategory;
+            if (info.getInstance() instanceof PluginCategory) {
+                info.getHandlers().add(new HandlerImpl(info.getReference()));
+
+                return true;
+            }
+
+            return false;
         }
 
         @Override
