@@ -4,6 +4,7 @@ import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
+import codes.laivy.plugin.factory.handlers.Handlers;
 import codes.laivy.plugin.factory.handlers.PluginHandler;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -56,6 +57,15 @@ public interface PluginFactory extends Iterable<PluginInfo> {
      * @return A non-null {@link PluginInfo} instance corresponding to the provided plugin name.
      */
     @NotNull PluginInfo retrieve(@NotNull String name);
+
+    // Global Handler
+
+    /**
+     * Retrieves the global handlers list, those handlers will be applied to every plug-ins.
+     *
+     * @return the global handlers iterable
+     */
+    @NotNull Handlers getGlobalHandlers();
 
     // Categories
 

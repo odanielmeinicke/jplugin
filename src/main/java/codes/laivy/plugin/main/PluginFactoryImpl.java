@@ -7,6 +7,7 @@ import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.factory.PluginFactory;
 import codes.laivy.plugin.factory.PluginFinder;
+import codes.laivy.plugin.factory.handlers.Handlers;
 import codes.laivy.plugin.factory.handlers.PluginHandler;
 import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
 import org.jetbrains.annotations.ApiStatus;
@@ -21,6 +22,8 @@ final class PluginFactoryImpl implements PluginFactory {
     // Object
 
     private final @NotNull Map<String, PluginCategory> categories = new HashMap<>();
+    private final @NotNull Handlers handlers = Handlers.create();
+
     final @NotNull Map<Class<?>, PluginInfo> plugins = new LinkedHashMap<>();
 
     public PluginFactoryImpl() {
@@ -40,6 +43,11 @@ final class PluginFactoryImpl implements PluginFactory {
     @Override
     public @NotNull PluginInfo retrieve(@NotNull String name) {
         return plugins.values().stream().filter(plugin -> Objects.equals(plugin.getName(), name)).findFirst().orElseThrow(() -> new IllegalArgumentException("there's no plugin with name '" + name + "'"));
+    }
+
+    @Override
+    public @NotNull Handlers getGlobalHandlers() {
+        return handlers;
     }
 
     // Handlers

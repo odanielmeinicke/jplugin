@@ -6,6 +6,7 @@ import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.factory.handlers.Handlers;
 import codes.laivy.plugin.factory.handlers.PluginHandler;
 import codes.laivy.plugin.initializer.PluginInitializer;
+import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -435,6 +436,15 @@ public abstract class PluginInfo {
                 }
             }
         }
+
+        // Global handlers
+        for (@NotNull PluginHandler handler : Plugins.getFactory().getGlobalHandlers()) {
+            try {
+                consumer.accept(handler);
+            } catch (@NotNull Throwable throwable) {
+                throw new RuntimeException("cannot invoke global list's handler to " + action + " '" + this + "': " + handler, throwable);
+            }
+        }
     }
     @FunctionalInterface
     private interface ThrowingConsumer<T> {
@@ -653,6 +663,17 @@ public abstract class PluginInfo {
                     }
                 } catch (@NotNull Throwable throwable) {
                     throw new RuntimeException("cannot invoke category's handler list to add plugin '" + this + "': " + handler, throwable);
+                }
+            }
+
+            // Global handlers
+            for (@NotNull PluginHandler handler : Plugins.getFactory().getGlobalHandlers()) {
+                try {
+                    if (!handler.accept(PluginInfo.this)) {
+                        return false;
+                    }
+                } catch (@NotNull Throwable throwable) {
+                    throw new RuntimeException("cannot invoke global list's handler to " + handler + " '" + this + "': " + handler, throwable);
                 }
             }
 
