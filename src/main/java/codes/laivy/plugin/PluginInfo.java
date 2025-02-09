@@ -8,7 +8,6 @@ import codes.laivy.plugin.factory.handlers.PluginHandler;
 import codes.laivy.plugin.initializer.PluginInitializer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.*;
 
@@ -92,7 +91,7 @@ public abstract class PluginInfo {
     /**
      * An array of PluginInfo objects representing the plugins that this plugin depends on.
      */
-    private final @NotNull PluginInfo @NotNull [] dependencies;
+    private final @NotNull Collection<PluginInfo> dependencies;
 
     /**
      * A mutable set of PluginInfo objects representing the plugins that depend on this plugin.
@@ -142,7 +141,7 @@ public abstract class PluginInfo {
         this.name = name;
         this.description = description;
         this.reference = reference;
-        this.dependencies = dependencies;
+        this.dependencies = new LinkedHashSet<>(Arrays.asList(dependencies));
         this.categories = new HashSet<>(Arrays.asList(categories));
         this.initializer = initializer;
     }
@@ -196,13 +195,13 @@ public abstract class PluginInfo {
     }
 
     /**
-     * Returns an unmodifiable collection of PluginInfo objects representing the plugins that this plugin depends on.
+     * Returns a collection of PluginInfo objects representing the plugins that this plugin depends on.
+     * Modifying this collection at the runtime may be extremely dangerous to the plugin's loading/unloading.
      *
      * @return A collection of plugin dependencies.
      */
-    @Unmodifiable
     public @NotNull Collection<@NotNull PluginInfo> getDependencies() {
-        return Arrays.asList(dependencies);
+        return dependencies;
     }
 
     /**
