@@ -161,12 +161,14 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
          */
         @Override
         public void start() throws PluginInitializeException {
-            super.start();
             try {
                 @NotNull Constructor<?> constructor = getReference().getDeclaredConstructor();
                 constructor.setAccessible(true);
                 // Instantiate the plugin using its no-argument constructor.
                 this.instance = constructor.newInstance();
+
+                // Super start
+                super.start();
             } catch (@NotNull Throwable throwable) {
                 setState(State.FAILED);
                 if (throwable instanceof InvocationTargetException) {
@@ -186,7 +188,6 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                             getReference().getName(), throwable);
                 }
             }
-            setState(State.RUNNING);
         }
 
         /**
@@ -213,8 +214,8 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
             if (!getState().isRunning()) {
                 return;
             }
+
             try {
-                super.close();
                 if (getInstance() instanceof Closeable) {
                     ((Closeable) getInstance()).close();
                 } else if (getInstance() instanceof Flushable) {
@@ -225,9 +226,13 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                     throw (PluginInterruptException) e.getCause();
                 }
                 throw new PluginInterruptException(getReference(), "cannot invoke interrupt method", e.getCause());
+            }
+
+            // Super close
+            try {
+                super.close();
             } finally {
                 instance = null;
-                setState(State.IDLE);
             }
         }
     }

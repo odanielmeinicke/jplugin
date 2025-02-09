@@ -3,8 +3,6 @@ package codes.laivy.plugin.initializer;
 import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.PluginInfo.Builder;
 import codes.laivy.plugin.category.PluginCategory;
-import codes.laivy.plugin.exception.PluginInitializeException;
-import codes.laivy.plugin.exception.PluginInterruptException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -72,47 +70,6 @@ public final class StaticPluginInitializer implements PluginInitializer {
          */
         public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories) {
             super(reference, name, description, dependencies, categories, StaticPluginInitializer.class);
-        }
-
-        // Modules
-
-        /**
-         * Starts the plugin lifecycle. This method marks the plugin as running
-         * and ensures that any initialization errors are properly handled.
-         *
-         * @throws PluginInitializeException If an error occurs during initialization.
-         */
-        @Override
-        public void start() throws PluginInitializeException {
-            try {
-                super.start();
-            } catch (@NotNull Throwable throwable) {
-                setState(State.FAILED);
-                throw new RuntimeException("cannot initialize plugin: " + this, throwable);
-            }
-
-            // Mark as running
-            setState(State.RUNNING);
-        }
-
-        /**
-         * Closes the plugin, ensuring that resources are released and
-         * transitioning the state back to {@link State#IDLE}.
-         *
-         * @throws PluginInterruptException If an error occurs during shutdown.
-         */
-        @Override
-        public void close() throws PluginInterruptException {
-            if (!getState().isRunning()) {
-                return;
-            }
-
-            try {
-                super.close();
-            } finally {
-                instance = null;
-                setState(State.IDLE);
-            }
         }
 
     }

@@ -159,7 +159,6 @@ public final class MethodPluginInitializer implements PluginInitializer {
         @Override
         public void start() throws PluginInitializeException {
             try {
-                super.start();
                 @NotNull Method method = getReference().getDeclaredMethod("initialize");
                 method.setAccessible(true);
                 // Verify that the initialize method is static; if not, throw an exception.
@@ -168,6 +167,9 @@ public final class MethodPluginInitializer implements PluginInitializer {
                 }
                 // Invoke the static initialize method. It may return an instance or be void.
                 this.instance = method.invoke(null);
+
+                // Super start
+                super.start();
             } catch (@NotNull Throwable throwable) {
                 setState(State.FAILED);
                 if (throwable instanceof InvocationTargetException) {
@@ -183,7 +185,6 @@ public final class MethodPluginInitializer implements PluginInitializer {
                     throw new RuntimeException("cannot initialize plugin: " + this, throwable);
                 }
             }
-            setState(State.RUNNING);
         }
 
         /**
@@ -228,8 +229,6 @@ public final class MethodPluginInitializer implements PluginInitializer {
                 return;
             }
             try {
-                super.close();
-
                 @Nullable Method method = null;
                 for (@NotNull Method target : getReference().getDeclaredMethods()) {
                     if (!target.getName().equals("interrupt")) {
@@ -270,9 +269,13 @@ public final class MethodPluginInitializer implements PluginInitializer {
                 throw new PluginInterruptException(getReference(), "cannot invoke interrupt method", e.getCause());
             } catch (@NotNull IllegalAccessException e) {
                 throw new PluginInterruptException(getReference(), "cannot access interrupt method", e);
+            }
+
+            // Super close
+            try {
+                super.close();
             } finally {
                 instance = null;
-                setState(State.IDLE);
             }
         }
     }
