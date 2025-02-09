@@ -42,18 +42,24 @@ public interface PluginHandler {
     /**
      * Invoked when dynamic modifications are applied to an existing PluginInfo instance.
      * <p>
-     * This callback is intended for situations where changes are made to a PluginInfo that has already been created and registered,
-     * such as when adding or removing categories (e.g., using {@code pluginInfo.getCategories().add(category)}).
+     * This callback is intended for situations where changes are made to a PluginInfo that has already been
+     * created and registered, such as when adding or removing categories (e.g., using
+     * {@code pluginInfo.getCategories().add(category)}). Unlike the builder-based
+     * {@link #accept(PluginInfo.Builder)} method—which is invoked during the initial creation of the plugin—
+     * this method is triggered to evaluate and approve dynamic alterations to the plugin's configuration at runtime.
      * <p>
-     * Unlike the builder-based {@link #accept(PluginInfo.Builder)} method, which is used during the initial creation
-     * of the plugin, this method is triggered to evaluate and approve dynamic alterations to the plugin's configuration
-     * at runtime. This provides a mechanism to enforce validation rules or perform custom processing whenever the plugin's state
-     * is modified after its creation.
+     * It is important to note that once a PluginInfo is created (after successfully passing the builder-based
+     * accept method), it will also be subjected to this accept method. In other words, the creation process
+     * of a plugin involves two stages of validation: first, the PluginInfo.Builder is validated via
+     * {@link #accept(PluginInfo.Builder)}, and if accepted, the resulting PluginInfo instance is then validated
+     * through this method. Furthermore, any subsequent dynamic modifications to an existing PluginInfo will also
+     * pass through this callback to ensure that all changes meet the handler's criteria.
      * <p>
-     * A return value of {@code true} indicates that the dynamic modification is accepted and the change will be applied,
-     * whereas {@code false} will block the modification from being executed.
+     * A return value of {@code true} indicates that the dynamic modification (or initial post-creation validation)
+     * is accepted and the change will be applied; a return value of {@code false} will block the modification
+     * from being executed.
      *
-     * @param info the existing {@link PluginInfo} instance that is being dynamically modified.
+     * @param info the existing {@link PluginInfo} instance that is being dynamically modified or has just been created.
      * @return {@code true} if the dynamic modification is accepted; {@code false} otherwise.
      */
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")

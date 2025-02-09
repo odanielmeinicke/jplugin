@@ -550,10 +550,46 @@ final class PluginFinderImpl implements PluginFinder {
                         }
                     }
                 }
+
+                // Global handlers
+                for (@NotNull PluginHandler handler : factory.getGlobalHandlers()) {
+                    if (!handler.accept(builder)) {
+                        continue main;
+                    }
+                }
             }
 
             // Build
             @NotNull PluginInfo plugin = builder.build();
+
+            // Call Handlers
+            {
+                // Category handlers
+                for (@NotNull PluginCategory category : categories) {
+                    // Category native handler
+                    if (!category.accept(plugin)) {
+                        continue main;
+                    }
+
+                    // Handlers
+                    for (@NotNull PluginHandler handler : category.getHandlers()) {
+                        try {
+                            if (!handler.accept(plugin)) {
+                                continue main;
+                            }
+                        } catch (@NotNull Throwable throwable) {
+                            throw new RuntimeException("cannot invoke category's handler to accept '" + category + "': " + handler);
+                        }
+                    }
+                }
+
+                // Global handlers
+                for (@NotNull PluginHandler handler : factory.getGlobalHandlers()) {
+                    if (!handler.accept(plugin)) {
+                        continue main;
+                    }
+                }
+            }
 
             // Register it
             factory.plugins.put(reference, plugin);
