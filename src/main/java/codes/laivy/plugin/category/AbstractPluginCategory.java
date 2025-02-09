@@ -1,7 +1,6 @@
 package codes.laivy.plugin.category;
 
 import codes.laivy.plugin.PluginInfo;
-import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.factory.handlers.Handlers;
 import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;

@@ -84,7 +84,7 @@ public final class Plugins {
      * <p>
      * This method performs a case-insensitive lookup for a PluginCategory with the given name. If a category
      * with that name already exists within the system, the existing instance is returned. Otherwise, if no such
-     * PluginCategory exists, a new instance is created using jplugin's default configuration settings.
+     * PluginCategory exists, a new instance is created using JPlugin's default configuration settings.
      * <p>
      * The newly created category will automatically include the standard lifecycle event handlers and policies
      * as defined by the framework. This ensures consistency across the system, as each category is uniquely defined

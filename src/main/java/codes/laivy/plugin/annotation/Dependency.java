@@ -45,7 +45,7 @@ public @interface Dependency {
      */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
-    public @interface Dependencies {
+    @interface Dependencies {
         /**
          * An array of {@link Dependency} annotations.
          *

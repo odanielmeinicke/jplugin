@@ -350,7 +350,7 @@ public abstract class PluginInfo {
     public enum State {
 
         /**
-         * Indicates that the plugin is idle. A plugin may be idle when it has been created or after it has fully stopped running.
+         * Indicates that the plugin is idle. A plugin may be idle when it has been created, or after it has fully stopped running.
          */
         IDLE,
 

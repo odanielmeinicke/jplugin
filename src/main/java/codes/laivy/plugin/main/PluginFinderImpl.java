@@ -324,7 +324,7 @@ final class PluginFinderImpl implements PluginFinder {
         }
 
         @NotNull ClassLoader classLoader = reference.getClassLoader();
-        @NotNull Set<String> categories = Arrays.stream(reference.getAnnotationsByType(Category.class)).map(Category::name).distinct().collect(Collectors.toSet());
+        @NotNull Set<String> categories = Arrays.stream(reference.getAnnotationsByType(Category.class)).map(Category::name).map(String::toLowerCase).collect(Collectors.toSet());
         @NotNull String packge = reference.getPackage().getName();
         @NotNull Class<? extends PluginInitializer> initializer = reference.isAnnotationPresent(Initializer.class) ? reference.getAnnotation(Initializer.class).type() : ConstructorPluginInitializer.class;
         @NotNull String name = reference.getAnnotation(Plugin.class).name();
@@ -333,7 +333,7 @@ final class PluginFinderImpl implements PluginFinder {
 
         if (!classLoaders.isEmpty() && classLoaders.contains(classLoader)) {
             return false;
-        } else if (!this.categories.isEmpty() && this.categories.containsAll(categories)) {
+        } else if (!this.categories.isEmpty() && this.categories.stream().map(category -> category.getName().toLowerCase()).collect(Collectors.toSet()).containsAll(categories)) {
             return false;
         } else if (!checkPackageWithin(packge)) {
             return false;
@@ -408,7 +408,7 @@ final class PluginFinderImpl implements PluginFinder {
                                                     valid.set(false);
                                                 }
                                             } else if (descriptor.contains(Category.class.getName().replace('.', '/'))) {
-                                                if (!categories.isEmpty() && name.equals("name") && !categories.contains(value.toString())) {
+                                                if (!categories.isEmpty() && name.equals("name") && categories.stream().noneMatch(category -> category.getName().equalsIgnoreCase(value.toString()))) {
                                                     valid.set(false);
                                                 }
                                             } else if (descriptor.contains(Initializer.class.getName().replace('.', '/'))) {
@@ -464,7 +464,7 @@ final class PluginFinderImpl implements PluginFinder {
 
             // Check if it's an inner and non-class
             if (reference.getEnclosingClass() != null && !Modifier.isStatic(reference.getModifiers())) {
-                throw new InvalidPluginException(reference, "a non-inner class cannot be a plugin, the class should be atleast static");
+                throw new InvalidPluginException(reference, "a non-inner class cannot be a plugin, the class should be at least static");
             }
 
             // Retrieve plugin loader
