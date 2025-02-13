@@ -122,7 +122,6 @@ Usage
 import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 @Initializer(type = ConstructorPluginInitializer.class) // This is the default initializer!
 @Plugin(name = "Initializer Plug-in", description = "A plugin with a custom initializer.")
@@ -310,12 +309,12 @@ final class Authentication extends Page {
    private Authentication() {
       super("/authentication"); // The page path
    }
-   
+
    @Override
    public void execute(HttpClient client, HttpData data) {
       // Do stuff here
    }
-   
+
 }
 ```
 

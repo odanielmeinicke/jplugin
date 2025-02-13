@@ -8,6 +8,7 @@ import codes.laivy.plugin.factory.PluginFactory;
 import codes.laivy.plugin.factory.PluginFinder;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -39,8 +40,42 @@ public final class Plugins {
 
     // Static initializers
 
+    private static @Nullable ShutdownHook hook = new ShutdownHook();
+
     static {
-        Runtime.getRuntime().addShutdownHook(new ShutdownHook());
+        Runtime.getRuntime().addShutdownHook(hook);
+    }
+
+    /**
+     * Enables or disables the shutdown hook for the plugin framework.
+     *
+     * <p>
+     * When the shutdown hook is enabled (by passing {@code true}), a shutdown hook is registered with the JVM.
+     * This hook ensures that all plugins are automatically interrupted and unloaded when the runtime terminates,
+     * allowing for a graceful shutdown of plugin resources.
+     * </p>
+     *
+     * <p>
+     * Conversely, if the shutdown hook is disabled (by passing {@code false}), the registered shutdown hook is removed.
+     * In this case, the framework will not automatically unload plugins when the application is shutting down.
+     * This behavior may be desirable in environments where plugin lifecycle management is handled externally.
+     * </p>
+     *
+     * <p>
+     * By default, the shutdown hook is active and enabled.
+     * </p>
+     *
+     * @param shutdownHook {@code true} to enable the shutdown hook and have plugins automatically unloaded on shutdown;
+     *                     {@code false} to disable it, requiring manual management of plugin unloading.
+     */
+    public static void setShutdownHook(boolean shutdownHook) {
+        if (hook != null && !shutdownHook) {
+            Runtime.getRuntime().removeShutdownHook(hook);
+            hook = null;
+        } else if (hook == null && shutdownHook) {
+            hook = new ShutdownHook();
+            Runtime.getRuntime().addShutdownHook(hook);
+        }
     }
 
     // Factory

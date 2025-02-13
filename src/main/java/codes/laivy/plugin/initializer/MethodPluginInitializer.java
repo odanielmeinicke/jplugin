@@ -48,6 +48,7 @@ import java.lang.reflect.Modifier;
  * problems encountered while invoking the {@code interrupt} method or performing resource cleanup during shutdown
  * will lead to a {@link PluginInterruptException} with detailed context.
  */
+// TODO: 13/02/2025 Add method names
 public final class MethodPluginInitializer implements PluginInitializer {
 
     /**
@@ -238,6 +239,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
                     } else if (target.getParameterCount() > 1) {
                         continue;
                     }
+
                     method = target;
                     break;
                 }
@@ -266,7 +268,8 @@ public final class MethodPluginInitializer implements PluginInitializer {
                 if (e.getCause() instanceof PluginInterruptException) {
                     throw (PluginInterruptException) e.getCause();
                 }
-                throw new PluginInterruptException(getReference(), "cannot invoke interrupt method", e.getCause());
+
+                throw new PluginInterruptException(getReference(), "cannot invoke interrupt method", e);
             } catch (@NotNull IllegalAccessException e) {
                 throw new PluginInterruptException(getReference(), "cannot access interrupt method", e);
             }

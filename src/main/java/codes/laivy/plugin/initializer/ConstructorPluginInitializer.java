@@ -225,7 +225,8 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                 if (e.getCause() instanceof PluginInterruptException) {
                     throw (PluginInterruptException) e.getCause();
                 }
-                throw new PluginInterruptException(getReference(), "cannot invoke interrupt method", e.getCause());
+
+                throw new PluginInterruptException(getReference(), "cannot invoke interrupt method", e);
             }
 
             // Super close
