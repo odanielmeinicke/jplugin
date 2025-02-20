@@ -11,7 +11,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * The Plugins class serves as a central utility and access point for the plugin framework.
@@ -370,10 +374,21 @@ public final class Plugins {
          */
         @Override
         public void run() {
-            try {
-                interruptAll();
-            } catch (@NotNull PluginInterruptException e) {
-                throw new RuntimeException(e);
+            @NotNull List<PluginInfo> plugins = factory.stream().distinct().collect(Collectors.toCollection(LinkedList::new));
+            Collections.reverse(plugins);
+
+            for (@NotNull PluginInfo info : plugins) {
+                if (!info.isAutoClose()) {
+                    continue;
+                } else if (info.getState() != PluginInfo.State.RUNNING) {
+                    continue;
+                }
+
+                try {
+                    info.close();
+                } catch (@NotNull PluginInterruptException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }

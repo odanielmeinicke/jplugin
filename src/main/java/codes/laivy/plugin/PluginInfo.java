@@ -112,12 +112,17 @@ public abstract class PluginInfo {
     /**
      * The current lifecycle state of the plugin. This field is volatile to ensure proper visibility across threads.
      */
-    private volatile @NotNull State state = State.IDLE;
+    private @NotNull State state = State.IDLE;
 
     /**
      * The actual plugin instance. This may be null if the plugin initialization strategy does not produce an instance.
      */
     protected @Nullable Object instance;
+
+    /**
+     * This boolean field determines if the plugin should be automatically closed with the shutdown hook
+     */
+    protected boolean autoClose = true;
 
     /**
      * The collection of event handlers that manage lifecycle events for this plugin.
@@ -148,6 +153,42 @@ public abstract class PluginInfo {
     }
 
     // Getters
+
+    /**
+     * Returns whether the plugin is configured to be automatically closed during system shutdown.
+     * <p>
+     * When {@code autoClose} is set to {@code true}, the plugin is expected to be automatically closed by the
+     * shutdown hook, allowing it to gracefully release resources and perform necessary cleanup operations.
+     * This behavior is integral to ensuring that plugins do not leave open resources or incomplete operations
+     * when the application terminates.
+     * <p>
+     * However, if the shutdown hook mechanism is disabled (for example, via {@link Plugins#setShutdownHook(boolean)}
+     * with a value of {@code false}), then this flag will have no effect, as the shutdown hook will not trigger
+     * the automatic closure of plugins.
+     * </p>
+     *
+     * @return {@code true} if the plugin is configured to be automatically closed on shutdown; {@code false} otherwise.
+     */
+    public boolean isAutoClose() {
+        return autoClose;
+    }
+    /**
+     * Configures whether the plugin should be automatically closed during system shutdown.
+     * <p>
+     * Setting this flag to {@code true} will enable the plugin to be closed automatically by the shutdown hook,
+     * ensuring that it can perform necessary cleanup and resource deallocation when the application is terminating.
+     * Conversely, setting it to {@code false} will prevent the plugin from being automatically closed.
+     * <p>
+     * <strong>Important:</strong> This setting is only effective if the shutdown hook mechanism is enabled.
+     * If the shutdown hook is disabled (e.g., by calling {@link Plugins#setShutdownHook(boolean)} with {@code false}),
+     * then the value of {@code autoClose} will be ignored and the plugin will not be automatically closed on shutdown.
+     * </p>
+     *
+     * @param autoClose {@code true} to enable automatic closure during shutdown; {@code false} to disable it.
+     */
+    public void setAutoClose(boolean autoClose) {
+        this.autoClose = autoClose;
+    }
 
     /**
      * Returns the human-readable name of the plugin.

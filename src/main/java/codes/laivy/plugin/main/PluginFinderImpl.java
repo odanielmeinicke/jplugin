@@ -460,6 +460,8 @@ final class PluginFinderImpl implements PluginFinder {
             // Check if predicate validates it
             if (!predicate.test(reference)) {
                 continue;
+            } else if (factory.plugins.containsKey(reference) && !factory.plugins.get(reference).getState().isIdle()) {
+                continue;
             }
 
             // Check if it's an inner and non-class
