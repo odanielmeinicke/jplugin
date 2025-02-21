@@ -207,22 +207,21 @@ final class PluginFactoryImpl implements PluginFactory {
         public boolean accept(PluginInfo.@NotNull Builder builder) {
             if (PluginCategory.class.isAssignableFrom(builder.getReference())) {
                 builder.initializer(ConstructorPluginInitializer.class);
-                builder.getHandlers().add(new HandlerImpl(builder.getReference()));
 
                 return true;
+            } else {
+                return false;
             }
-
-            return false;
         }
         @Override
         public boolean accept(@NotNull PluginInfo info) {
-            if (info.getInstance() instanceof PluginCategory) {
+            if (PluginCategory.class.isAssignableFrom(info.getReference())) {
                 info.getHandlers().add(new HandlerImpl(info.getReference()));
 
                 return true;
+            } else {
+                return false;
             }
-
-            return false;
         }
 
         @Override

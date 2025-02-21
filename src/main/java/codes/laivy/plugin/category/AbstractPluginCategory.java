@@ -29,15 +29,15 @@ public abstract class AbstractPluginCategory implements PluginCategory, Closeabl
     // Getters
 
     @Override
-    public @NotNull String getName() {
+    public final @NotNull String getName() {
         return name;
     }
     @Override
-    public @NotNull Handlers getHandlers() {
+    public final @NotNull Handlers getHandlers() {
         return handlers;
     }
     @Override
-    public @NotNull Collection<@NotNull PluginInfo> getPlugins() {
+    public final @NotNull Collection<@NotNull PluginInfo> getPlugins() {
         return plugins;
     }
 
@@ -50,18 +50,18 @@ public abstract class AbstractPluginCategory implements PluginCategory, Closeabl
     // Implementations
 
     @Override
-    public boolean equals(@Nullable Object object) {
-        if (object == null || getClass() != object.getClass()) return false;
-        @NotNull AbstractPluginCategory that = (AbstractPluginCategory) object;
+    public final boolean equals(@Nullable Object object) {
+        if (!(object instanceof PluginCategory)) return false;
+        @NotNull PluginCategory that = (PluginCategory) object;
         return getName().equalsIgnoreCase(that.getName());
     }
     @Override
-    public int hashCode() {
+    public final int hashCode() {
         return Objects.hash(getName().toLowerCase());
     }
 
     @Override
-    public @NotNull String toString() {
+    public final @NotNull String toString() {
         return getName();
     }
 
