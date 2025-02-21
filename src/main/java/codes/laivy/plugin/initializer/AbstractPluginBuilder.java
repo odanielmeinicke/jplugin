@@ -4,7 +4,6 @@ import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.PluginInfo.Builder;
 import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.factory.handlers.Handlers;
-import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,10 +20,12 @@ abstract class AbstractPluginBuilder implements Builder {
 
     private @Nullable String name;
     private @Nullable String description;
-    private @NotNull Class<? extends PluginInitializer> initializer = ConstructorPluginInitializer.class;
+    protected @NotNull Class<? extends PluginInitializer> initializer = ConstructorPluginInitializer.class;
 
-    private final @NotNull Set<PluginCategory> categories = new LinkedHashSet<>();
-    private final @NotNull Set<PluginInfo> dependencies = new LinkedHashSet<>();
+    protected final @NotNull Set<String> unregisteredCategories = new LinkedHashSet<>();
+    protected final @NotNull Set<PluginCategory> registeredCategories = new LinkedHashSet<>();
+
+    protected final @NotNull Set<Class<?>> dependencies = new LinkedHashSet<>();
 
     private final @NotNull Handlers handlers = Handlers.create();
 
@@ -49,20 +50,6 @@ abstract class AbstractPluginBuilder implements Builder {
     }
 
     @Override
-    public @NotNull PluginInfo @NotNull [] getDependencies() {
-        return dependencies.toArray(new PluginInfo[0]);
-    }
-    @Override
-    public @NotNull PluginCategory @NotNull [] getCategories() {
-        return categories.toArray(new PluginCategory[0]);
-    }
-
-    @Override
-    public @NotNull Class<? extends PluginInitializer> getInitializer() {
-        return initializer;
-    }
-
-    @Override
     public @NotNull Handlers getHandlers() {
         return handlers;
     }
@@ -81,39 +68,52 @@ abstract class AbstractPluginBuilder implements Builder {
     }
 
     @Override
+    public @NotNull Builder category(@NotNull String category) {
+        this.unregisteredCategories.add(category);
+        return this;
+    }
+    @Override
+    public @NotNull Builder categories(@NotNull String @NotNull ... categories) {
+        this.unregisteredCategories.clear();
+        this.unregisteredCategories.addAll(Arrays.asList(categories));
+
+        return this;
+    }
+
+    @Override
     public @NotNull Builder category(@NotNull PluginCategory category) {
-        this.categories.add(category);
+        this.registeredCategories.add(category);
         return this;
     }
     @Override
     public @NotNull Builder categories(@NotNull PluginCategory @NotNull ... categories) {
-        this.categories.clear();
-        this.categories.addAll(Arrays.asList(categories));
+        this.registeredCategories.clear();
+        this.registeredCategories.addAll(Arrays.asList(categories));
 
         return this;
     }
 
     @Override
     public @NotNull Builder dependency(@NotNull Class<?> dependency) {
-        this.dependencies.add(Plugins.retrieve(dependency));
+        this.dependencies.add(dependency);
         return this;
     }
     @Override
     public @NotNull Builder dependency(@NotNull PluginInfo info) {
-        this.dependencies.add(info);
+        this.dependencies.add(info.getReference());
         return this;
     }
     @Override
     public @NotNull Builder dependencies(@NotNull Class<?> @NotNull ... dependencies) {
         this.dependencies.clear();
-        this.dependencies.addAll(Arrays.stream(dependencies).map(Plugins::retrieve).collect(Collectors.toList()));
+        this.dependencies.addAll(Arrays.asList(dependencies));
 
         return this;
     }
     @Override
     public @NotNull Builder dependencies(@NotNull PluginInfo @NotNull ... dependencies) {
         this.dependencies.clear();
-        this.dependencies.addAll(Arrays.asList(dependencies));
+        this.dependencies.addAll(Arrays.stream(dependencies).map(PluginInfo::getReference).collect(Collectors.toList()));
 
         return this;
     }

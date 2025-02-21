@@ -90,6 +90,46 @@ public interface PluginFactory extends Iterable<PluginInfo> {
     @NotNull PluginCategory getCategory(@NotNull String name);
 
     /**
+     * Retrieves the PluginCategory corresponding to the specified name, with an option to create it if it does not exist.
+     * <p>
+     * This method performs a case-insensitive lookup for a PluginCategory with the given name. If a category with that name
+     * already exists within the system, the existing instance is returned wrapped in an {@link Optional}. If no such category exists,
+     * the behavior depends on the value of the {@code create} parameter:
+     * <ul>
+     *   <li>If {@code create} is {@code true}, a new PluginCategory is created using JPlugin's default configuration settings,
+     *       which include the standard lifecycle event handlers and policies defined by the framework. The newly created category
+     *       will then be registered and returned within an {@link Optional}.</li>
+     *   <li>If {@code create} is {@code false}, no new category will be created and an empty {@link Optional} is returned.</li>
+     * </ul>
+     * <p>
+     * This approach ensures that each category is uniquely defined and that subsequent calls with the same name (ignoring case)
+     * will consistently return the same PluginCategory instance, or allow for controlled creation of a new category when desired.
+     *
+     * @param name   the name of the category for which to retrieve the PluginCategory; must not be null. The lookup is case-insensitive.
+     * @param create if {@code true} and no matching category exists, a new PluginCategory will be created with default settings;
+     *               if {@code false}, an empty {@link Optional} is returned when the category is not found.
+     * @return a non-null {@link Optional} containing the PluginCategory instance corresponding to the specified name, or an empty
+     *         {@link Optional} if no matching category exists and creation is not permitted.
+     */
+    @NotNull Optional<PluginCategory> getCategory(@NotNull String name, boolean create);
+
+    /**
+     * Determines whether a PluginCategory with the specified name exists within the system.
+     * <p>
+     * This method performs a case-insensitive check for a PluginCategory matching the provided name.
+     * It allows clients to verify if a category has already been registered without creating a new one.
+     * If a PluginCategory with the given name exists, the method returns {@code true}; otherwise, it returns {@code false}.
+     * <p>
+     * This check is useful for ensuring that duplicate categories are not inadvertently created and that category-specific
+     * operations can be performed safely based on the existence of the category.
+     *
+     * @param name the name of the category to check; must not be null. The lookup is case-insensitive, meaning that for example,
+     *             "Utility" and "utility" are treated as identical.
+     * @return {@code true} if a PluginCategory with the specified name exists; {@code false} otherwise.
+     */
+    boolean hasCategory(@NotNull String name);
+
+    /**
      * Registers a custom PluginCategory instance.
      * <p>
      * This method allows developers to explicitly set a PluginCategory that they have customized, overriding

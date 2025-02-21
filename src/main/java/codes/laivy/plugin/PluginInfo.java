@@ -549,26 +549,6 @@ public abstract class PluginInfo {
         @NotNull Class<?> getReference();
 
         /**
-         * Returns an array of plugin instances the plugin depends on.
-         *
-         * @return A non-null array of plugin infos objects that the plugin depends on.
-         */
-        @NotNull PluginInfo @NotNull [] getDependencies();
-        /**
-         * Returns an array of classes representing the categories of the plugin.
-         *
-         * @return A non-null array of PluginCategory objects of the plugin categories.
-         */
-        @NotNull PluginCategory @NotNull [] getCategories();
-
-        /**
-         * Returns the {@link PluginInitializer} type configured for initializing the plugin.
-         *
-         * @return A non-null Class object extending PluginInitializer.
-         */
-        @NotNull Class<? extends PluginInitializer> getInitializer();
-
-        /**
          * Returns the collection of {@link PluginHandler} instances associated with the plugin.
          *
          * @return A non-null Handlers instance.
@@ -594,13 +574,27 @@ public abstract class PluginInfo {
         @NotNull Builder description(@Nullable String description);
 
         /**
+         * Adds a single category by the name to the plugin's list of categories.
+         *
+         * @param category A non-null category name.
+         * @return This Builder instance for chaining.
+         */
+        @NotNull Builder category(@NotNull String category);
+        /**
+         * Adds multiple categories names to the plugin's list of categories.
+         *
+         * @param categories An array of non-null categories names.
+         * @return This Builder instance for chaining.
+         */
+        @NotNull Builder categories(@NotNull String @NotNull ... categories);
+
+        /**
          * Adds a single category to the plugin's list of categories.
          *
          * @param category A non-null category.
          * @return This Builder instance for chaining.
          */
         @NotNull Builder category(@NotNull PluginCategory category);
-
         /**
          * Adds multiple categories to the plugin's list of categories.
          *

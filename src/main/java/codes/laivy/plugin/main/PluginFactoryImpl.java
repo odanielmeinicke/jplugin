@@ -54,11 +54,24 @@ final class PluginFactoryImpl implements PluginFactory {
 
     @Override
     public @NotNull PluginCategory getCategory(@NotNull String name) {
-        return categories.computeIfAbsent(name, k -> new AbstractPluginCategory(name) {});
+        return categories.computeIfAbsent(name.toLowerCase(), k -> new AbstractPluginCategory(name) {});
     }
     @Override
+    public @NotNull Optional<PluginCategory> getCategory(@NotNull String name, boolean create) {
+        if (create) {
+            return Optional.of(categories.computeIfAbsent(name.toLowerCase(), k -> new AbstractPluginCategory(name) {}));
+        } else {
+            return Optional.ofNullable(categories.getOrDefault(name.toLowerCase(), null));
+        }
+    }
+    @Override
+    public boolean hasCategory(@NotNull String name) {
+        return categories.containsKey(name.toLowerCase());
+    }
+
+    @Override
     public void setCategory(@NotNull PluginCategory category) {
-        categories.put(category.getName(), category);
+        categories.put(category.getName().toLowerCase(), category);
     }
 
     // Instances
@@ -231,7 +244,7 @@ final class PluginFactoryImpl implements PluginFactory {
             }
 
             @NotNull PluginCategory category = (PluginCategory) info.getInstance();
-            categories.put(category.getName(), category);
+            categories.put(category.getName().toLowerCase(), category);
         }
         @Override
         public void close(@NotNull PluginInfo info) throws PluginInterruptException {
@@ -242,7 +255,7 @@ final class PluginFactoryImpl implements PluginFactory {
             @NotNull PluginCategory category = (PluginCategory) info.getInstance();
 
             category.getPlugins().clear();
-            categories.remove(category.getName());
+            categories.remove(category.getName().toLowerCase());
         }
 
         // Classes

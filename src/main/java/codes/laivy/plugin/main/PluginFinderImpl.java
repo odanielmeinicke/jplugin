@@ -1,6 +1,7 @@
 package codes.laivy.plugin.main;
 
 import codes.laivy.plugin.PluginInfo;
+import codes.laivy.plugin.PluginInfo.Builder;
 import codes.laivy.plugin.PluginInfo.State;
 import codes.laivy.plugin.annotation.Category;
 import codes.laivy.plugin.annotation.Dependency;
@@ -40,7 +41,7 @@ final class PluginFinderImpl implements PluginFinder {
     private final @NotNull PluginFactoryImpl factory;
 
     private final @NotNull Set<ClassLoader> classLoaders = new HashSet<>();
-    private final @NotNull Set<PluginCategory> categories = new HashSet<>();
+    private final @NotNull Set<String> categories = new HashSet<>();
     private final @NotNull Map<String, Boolean> packages = new HashMap<>();
     private final @NotNull Set<Class<? extends PluginInitializer>> initializers = new HashSet<>();
     private final @NotNull Set<String> names = new HashSet<>();
@@ -77,26 +78,26 @@ final class PluginFinderImpl implements PluginFinder {
     @Override
     public @NotNull PluginFinder categories(@NotNull PluginCategory @NotNull ... categories) {
         this.categories.clear();
-        this.categories.addAll(Arrays.asList(categories));
+        this.categories.addAll(Arrays.stream(categories).map(PluginCategory::getName).collect(Collectors.toList()));
 
         return this;
     }
     @Override
     public @NotNull PluginFinder categories(@NotNull String @NotNull ... categories) {
         this.categories.clear();
-        this.categories.addAll(Arrays.stream(categories).map(Plugins::getCategory).collect(Collectors.toSet()));
+        this.categories.addAll(Arrays.asList(categories));
 
         return this;
     }
 
     @Override
     public @NotNull PluginFinder addCategory(@NotNull PluginCategory category) {
-        categories.add(category);
+        categories.add(category.getName());
         return this;
     }
     @Override
     public @NotNull PluginFinder addCategory(@NotNull String category) {
-        categories.add(Plugins.getCategory(category));
+        categories.add(category);
         return this;
     }
 
@@ -294,7 +295,7 @@ final class PluginFinderImpl implements PluginFinder {
     public boolean matches(@NotNull PluginInfo plugin) {
         if (!classLoaders.isEmpty() && classLoaders.contains(plugin.getReference().getClassLoader())) {
             return false;
-        } else if (!categories.isEmpty() && categories.containsAll(plugin.getCategories())) {
+        } else if (!categories.isEmpty() && categories.containsAll(plugin.getCategories().stream().map(PluginCategory::getName).collect(Collectors.toList()))) {
             return false;
         } else if (!checkPackageWithin(plugin.getReference().getPackage().getName())) {
             return false;
@@ -333,7 +334,7 @@ final class PluginFinderImpl implements PluginFinder {
 
         if (!classLoaders.isEmpty() && classLoaders.contains(classLoader)) {
             return false;
-        } else if (!this.categories.isEmpty() && this.categories.stream().map(category -> category.getName().toLowerCase()).collect(Collectors.toSet()).containsAll(categories)) {
+        } else if (!this.categories.isEmpty() && this.categories.stream().map(String::toLowerCase).collect(Collectors.toSet()).containsAll(categories)) {
             return false;
         } else if (!checkPackageWithin(packge)) {
             return false;
@@ -408,7 +409,7 @@ final class PluginFinderImpl implements PluginFinder {
                                                     valid.set(false);
                                                 }
                                             } else if (descriptor.contains(Category.class.getName().replace('.', '/'))) {
-                                                if (!categories.isEmpty() && name.equals("name") && categories.stream().noneMatch(category -> category.getName().equalsIgnoreCase(value.toString()))) {
+                                                if (!categories.isEmpty() && name.equals("name") && categories.stream().noneMatch(category -> category.equalsIgnoreCase(value.toString()))) {
                                                     valid.set(false);
                                                 }
                                             } else if (descriptor.contains(Initializer.class.getName().replace('.', '/'))) {
@@ -452,10 +453,10 @@ final class PluginFinderImpl implements PluginFinder {
     @Override
     public @NotNull PluginInfo @NotNull [] load(@NotNull Predicate<Class<?>> predicate) throws PluginInitializeException, IOException {
         // Variables
+        @NotNull Map<Class<?>, Builder> builders = new LinkedHashMap<>();
         @NotNull Map<Class<?>, PluginInfo> plugins = new LinkedHashMap<>();
 
         // Create instances
-        main:
         for (@NotNull Class<?> reference : organize(new HashSet<>(Arrays.asList(classes())))) {
             // Check if predicate validates it
             if (!predicate.test(reference)) {
@@ -497,7 +498,7 @@ final class PluginFinderImpl implements PluginFinder {
             }
 
             // Dependencies
-            @NotNull Set<PluginInfo> dependencies = new LinkedHashSet<>();
+            @NotNull Set<Class<?>> dependencies = new LinkedHashSet<>();
 
             for (@NotNull Dependency annotation : reference.getAnnotationsByType(Dependency.class)) {
                 @NotNull Class<?> dependency = annotation.type();
@@ -508,8 +509,8 @@ final class PluginFinderImpl implements PluginFinder {
                 }
 
                 // Generate instance
-                if (plugins.containsKey(dependency)) {
-                    dependencies.add(plugins.get(dependency));
+                if (builders.containsKey(dependency)) {
+                    dependencies.add(dependency);
                 } else {
                     throw new InvalidPluginException(reference, "there's a dependency that is not a plugin at '" + reference.getName() + "': " + dependency.getName());
                 }
@@ -523,14 +524,32 @@ final class PluginFinderImpl implements PluginFinder {
             @Nullable String description = reference.getAnnotation(Plugin.class).description();
             if (description.isEmpty()) description = null;
 
-            // Categories
-            @NotNull Set<PluginCategory> categories = new LinkedHashSet<>();
-            for (@NotNull Category category : reference.getAnnotationsByType(Category.class)) {
-                categories.add(Plugins.getCategory(category.name()));
-            }
+            // Create instance
+            @NotNull Builder builder = initializer.create(reference, name, description, dependencies.toArray(new Class[0]), new String[0]);
 
-            // Create instance and register it
-            @NotNull PluginInfo.Builder builder = initializer.create(reference, name, description, dependencies.toArray(new PluginInfo[0]), categories.toArray(new PluginCategory[0]));
+            // Register it
+            builders.put(reference, builder);
+        }
+
+        // Organize by dependencies order
+        main:
+        for (@NotNull Builder builder : organize(builders.values())) {
+            @NotNull Class<?> reference = builder.getReference();
+            @NotNull Set<PluginCategory> categories = new LinkedHashSet<>();
+
+            // Categories
+            @NotNull Set<String> unregisteredCategories = new LinkedHashSet<>();
+            @NotNull Set<PluginCategory> registeredCategories = new LinkedHashSet<>();
+            for (@NotNull Category category : reference.getAnnotationsByType(Category.class)) {
+                @Nullable PluginCategory instance = factory.getCategory(category.name(), false).orElse(null);
+
+                if (instance != null) {
+                    builder.category(instance);
+                    categories.add(instance);
+                } else {
+                    builder.category(category.name());
+                }
+            }
 
             // Call Handlers
             {
@@ -596,10 +615,7 @@ final class PluginFinderImpl implements PluginFinder {
             // Register it
             factory.plugins.put(reference, plugin);
             plugins.put(reference, plugin);
-        }
 
-        // Organize by dependencies order
-        for (@NotNull PluginInfo plugin : organize(plugins.values())) {
             try {
                 plugin.start();
             } catch (@NotNull PluginInitializeException e) {
@@ -674,9 +690,9 @@ final class PluginFinderImpl implements PluginFinder {
 
         return sorted;
     }
-    private static @NotNull Set<PluginInfo> organize(@NotNull Collection<@NotNull PluginInfo> plugins) {
-        @NotNull Set<PluginInfo> set = new LinkedHashSet<>();
-        @NotNull Map<Class<?>, PluginInfo> map = plugins.stream().collect(Collectors.toMap(PluginInfo::getReference, Function.identity(), (a, b) -> a, LinkedHashMap::new));
+    private static @NotNull Set<Builder> organize(@NotNull Collection<@NotNull Builder> plugins) {
+        @NotNull Set<Builder> set = new LinkedHashSet<>();
+        @NotNull Map<Class<?>, Builder> map = plugins.stream().collect(Collectors.toMap(Builder::getReference, Function.identity(), (a, b) -> a, LinkedHashMap::new));
         organize(map.keySet()).forEach(ref -> set.add(map.get(ref)));
 
         return set;
