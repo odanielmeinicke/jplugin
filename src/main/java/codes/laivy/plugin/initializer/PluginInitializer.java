@@ -1,7 +1,6 @@
 package codes.laivy.plugin.initializer;
 
 import codes.laivy.plugin.PluginInfo;
-import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.InvalidPluginException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -48,9 +47,9 @@ public interface PluginInitializer {
      *                     is not explicitly defined within the annotation or metadata.
      * @param description  A brief description of the plugin's purpose and functionality. This
      *                     value may be null if not explicitly specified.
-     * @param dependencies An array of {@link PluginInfo} instances representing the dependencies
+     * @param dependencies An array of {@link Class} instances representing the dependencies
      *                     required by this plugin. This ensures proper dependency resolution
-     *                     before the plugin is initialized.
+     *                     before the plugin is initialized. The classes must represent active plugins.
      * @param categories   An array of categories that classify the plugin within the system.
      *                     These categories help in organizing and filtering plugins based on their purpose.
      * @return A ready-to-construct {@link PluginInfo.Builder} instance encapsulating the provided metadata
@@ -63,6 +62,6 @@ public interface PluginInitializer {
     @NotNull PluginInfo.Builder create(@NotNull Class<?> reference,
                                        @Nullable String name,
                                        @Nullable String description,
-                                       @NotNull PluginInfo @NotNull [] dependencies,
-                                       @NotNull PluginCategory @NotNull [] categories) throws InvalidPluginException;
+                                       @NotNull Class<?> @NotNull [] dependencies,
+                                       @NotNull String @NotNull [] categories) throws InvalidPluginException;
 }

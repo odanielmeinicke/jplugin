@@ -3,6 +3,7 @@ package codes.laivy.plugin.initializer;
 import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.PluginInfo.Builder;
 import codes.laivy.plugin.category.PluginCategory;
+import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,7 +44,7 @@ public final class StaticPluginInitializer implements PluginInitializer {
      * @return A {@link PluginInfo} instance containing the plugin's metadata and lifecycle management logic.
      */
     @Override
-    public @NotNull Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories) {
+    public @NotNull Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
         return new BuilderImpl(reference, name, description, dependencies, categories);
     }
 
@@ -77,7 +78,7 @@ public final class StaticPluginInitializer implements PluginInitializer {
 
         // Object
 
-        private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories) {
+        private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
             super(reference);
 
             // Variables
@@ -91,7 +92,10 @@ public final class StaticPluginInitializer implements PluginInitializer {
 
         @Override
         public @NotNull PluginInfo build() {
-            return new PluginInfoImpl(getReference(), getName(), getDescription(), getDependencies(), getCategories());
+            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getFactory().getCategory(category)).toArray(PluginCategory[]::new));
+            info.getCategories().addAll(registeredCategories);
+
+            return info;
         }
 
     }
