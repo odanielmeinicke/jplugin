@@ -1,6 +1,8 @@
 package codes.laivy.plugin.main;
 
 import codes.laivy.plugin.PluginInfo;
+import codes.laivy.plugin.PluginInfo.Builder;
+import codes.laivy.plugin.annotation.Priority;
 import codes.laivy.plugin.category.AbstractPluginCategory;
 import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.PluginInitializeException;
@@ -9,7 +11,6 @@ import codes.laivy.plugin.factory.PluginFactory;
 import codes.laivy.plugin.factory.PluginFinder;
 import codes.laivy.plugin.factory.handlers.Handlers;
 import codes.laivy.plugin.factory.handlers.PluginHandler;
-import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -217,10 +218,9 @@ final class PluginFactoryImpl implements PluginFactory {
         // Modules
 
         @Override
-        public boolean accept(PluginInfo.@NotNull Builder builder) {
+        public boolean accept(@NotNull Builder builder) {
             if (PluginCategory.class.isAssignableFrom(builder.getReference())) {
-                builder.initializer(ConstructorPluginInitializer.class);
-
+                builder.comparable(o -> -1);
                 return true;
             } else {
                 return false;
@@ -273,7 +273,7 @@ final class PluginFactoryImpl implements PluginFactory {
             // Modules
 
             @Override
-            public boolean accept(PluginInfo.@NotNull Builder builder) {
+            public boolean accept(@NotNull Builder builder) {
                 builder.dependency(category);
                 return PluginHandler.super.accept(builder);
             }

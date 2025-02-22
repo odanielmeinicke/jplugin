@@ -1,5 +1,6 @@
 package codes.laivy.plugin;
 
+import codes.laivy.plugin.annotation.Priority;
 import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
@@ -549,11 +550,20 @@ public abstract class PluginInfo {
         @NotNull Class<?> getReference();
 
         /**
+         * Returns the dependencies of this builder.
+         *
+         * @return The non-null class array object representing the dependencies.
+         */
+        @NotNull Class<?> @NotNull [] getDependencies();
+
+        /**
          * Returns the collection of {@link PluginHandler} instances associated with the plugin.
          *
          * @return A non-null Handlers instance.
          */
         @NotNull Handlers getHandlers();
+
+        @NotNull Comparable<Builder> getComparable();
 
         // Setters
 
@@ -564,6 +574,31 @@ public abstract class PluginInfo {
          * @return This Builder instance for chaining.
          */
         @NotNull Builder name(@Nullable String name);
+
+        /**
+         * Sets the {@link Comparable} instance for the plugin, allowing customization of the loading order.
+         * <p>
+         * This method allows defining a comparison mechanism that determines the order in which plugins are loaded.
+         * If the current builder is considered <i>less than</i> (negative return value) the specified builder,
+         * it will be loaded first.
+         * <p>
+         * The default comparison mechanism relies on the {@link Priority} annotation. If both plugin classes
+         * lack this annotation, they are considered equal in terms of priority in the default implementation.
+         * Developers can override this behavior by providing a custom comparator that dictates the order
+         * in which plugins should be loaded.
+         * <p>
+         * <strong>Usage Example:</strong>
+         * <pre>
+         * {@code
+         * Builder builderA = new Builder().comparable((b1, b2) -> Integer.compare(b1.getPriority(), b2.getPriority()));
+         * Builder builderB = new Builder().comparable((b1, b2) -> -1); // Forces builderB to always load first
+         * }
+         * </pre>
+         *
+         * @param comparable the {@link Comparable} instance that will define how this builder is compared to others.
+         * @return the current {@link Builder} instance for method chaining.
+         */
+        @NotNull Builder comparable(@NotNull Comparable<Builder> comparable);
 
         /**
          * Sets the description for the plugin.

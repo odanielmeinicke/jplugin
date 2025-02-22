@@ -532,10 +532,12 @@ final class PluginFinderImpl implements PluginFinder {
         }
 
         // Organize by dependencies order
+        @NotNull Map<Builder, Collection<PluginCategory>> categories = new HashMap<>();
+
         main:
         for (@NotNull Builder builder : organize(builders.values())) {
             @NotNull Class<?> reference = builder.getReference();
-            @NotNull Set<PluginCategory> categories = new LinkedHashSet<>();
+            categories.put(builder, new LinkedList<>());
 
             // Categories
             @NotNull Set<String> unregisteredCategories = new LinkedHashSet<>();
@@ -545,7 +547,7 @@ final class PluginFinderImpl implements PluginFinder {
 
                 if (instance != null) {
                     builder.category(instance);
-                    categories.add(instance);
+                    categories.get(builder).add(instance);
                 } else {
                     builder.category(category.name());
                 }
@@ -554,7 +556,7 @@ final class PluginFinderImpl implements PluginFinder {
             // Call Handlers
             {
                 // Category handlers
-                for (@NotNull PluginCategory category : categories) {
+                for (@NotNull PluginCategory category : categories.get(builder)) {
                     // Category native handler
                     if (!category.accept(builder)) {
                         continue main;
@@ -579,6 +581,11 @@ final class PluginFinderImpl implements PluginFinder {
                     }
                 }
             }
+        }
+
+        main:
+        for (@NotNull Builder builder : organize(builders.values())) {
+            @NotNull Class<?> reference = builder.getReference();
 
             // Build
             @NotNull PluginInfo plugin = builder.build();
@@ -586,7 +593,7 @@ final class PluginFinderImpl implements PluginFinder {
             // Call Handlers
             {
                 // Category handlers
-                for (@NotNull PluginCategory category : categories) {
+                for (@NotNull PluginCategory category : categories.get(builder)) {
                     // Category native handler
                     if (!category.accept(plugin)) {
                         continue main;
@@ -690,12 +697,50 @@ final class PluginFinderImpl implements PluginFinder {
 
         return sorted;
     }
-    private static @NotNull Set<Builder> organize(@NotNull Collection<@NotNull Builder> plugins) {
-        @NotNull Set<Builder> set = new LinkedHashSet<>();
-        @NotNull Map<Class<?>, Builder> map = plugins.stream().collect(Collectors.toMap(Builder::getReference, Function.identity(), (a, b) -> a, LinkedHashMap::new));
-        organize(map.keySet()).forEach(ref -> set.add(map.get(ref)));
 
-        return set;
+    private static @NotNull Set<Builder> organize(@NotNull Collection<@NotNull Builder> plugins) {
+        @NotNull Set<Builder> sorted = new LinkedHashSet<>();
+        @NotNull List<Builder> remaining = new ArrayList<>(plugins);
+        @NotNull Map<Class<?>, Builder> builderByReference = plugins.stream().collect(Collectors.toMap(Builder::getReference, Function.identity()));
+
+        while (!remaining.isEmpty()) {
+            @NotNull List<Builder> eligible = new ArrayList<>();
+
+            for (@NotNull Builder builder : remaining) {
+                boolean ready = true;
+                for (@NotNull Class<?> dependency : builder.getDependencies()) {
+                    @NotNull Builder dependencyBuilder = builderByReference.get(dependency);
+
+                    if (dependencyBuilder != null && !sorted.contains(dependencyBuilder)) {
+                        ready = false;
+                        break;
+                    }
+                }
+                if (ready) {
+                    eligible.add(builder);
+                }
+            }
+
+            if (eligible.isEmpty()) {
+                throw new IllegalStateException("cyclic or unresolved dependencies detected: " + remaining);
+            }
+
+            eligible.sort((b1, b2) -> {
+                int count1 = (int) remaining.stream().filter(b -> Arrays.asList(b.getDependencies()).contains(b1.getReference())).count();
+                int count2 = (int) remaining.stream().filter(b -> Arrays.asList(b.getDependencies()).contains(b2.getReference())).count();
+
+                if (count1 != count2) {
+                    return Integer.compare(count2, count1);
+                }
+
+                return b1.getComparable().compareTo(b2);
+            });
+
+            @NotNull Builder chosen = eligible.get(0);
+            sorted.add(chosen);
+            remaining.remove(chosen);
+        }
+        return sorted;
     }
 
 }

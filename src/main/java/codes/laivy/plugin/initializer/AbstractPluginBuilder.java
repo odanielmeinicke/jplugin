@@ -2,6 +2,7 @@ package codes.laivy.plugin.initializer;
 
 import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.PluginInfo.Builder;
+import codes.laivy.plugin.annotation.Priority;
 import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.factory.handlers.Handlers;
 import org.jetbrains.annotations.NotNull;
@@ -26,6 +27,7 @@ abstract class AbstractPluginBuilder implements Builder {
     protected final @NotNull Set<PluginCategory> registeredCategories = new LinkedHashSet<>();
 
     protected final @NotNull Set<Class<?>> dependencies = new LinkedHashSet<>();
+    private @NotNull Comparable<Builder> comparable = new DefaultComparable();
 
     private final @NotNull Handlers handlers = Handlers.create();
 
@@ -52,6 +54,16 @@ abstract class AbstractPluginBuilder implements Builder {
     @Override
     public @NotNull Handlers getHandlers() {
         return handlers;
+    }
+
+    @Override
+    public @NotNull Class<?> @NotNull [] getDependencies() {
+        return dependencies.toArray(new Class[0]);
+    }
+
+    @Override
+    public @NotNull Comparable<Builder> getComparable() {
+        return comparable;
     }
 
     // Setters
@@ -119,9 +131,27 @@ abstract class AbstractPluginBuilder implements Builder {
     }
 
     @Override
+    public @NotNull Builder comparable(@NotNull Comparable<Builder> comparable) {
+        this.comparable = comparable;
+        return this;
+    }
+
+    @Override
     public @NotNull Builder initializer(@NotNull Class<? extends PluginInitializer> initializer) {
         this.initializer = initializer;
         return this;
+    }
+
+    // Classes
+
+    private final class DefaultComparable implements Comparable<Builder> {
+        @Override
+        public int compareTo(@NotNull Builder o) {
+            int a = getReference().isAnnotationPresent(Priority.class) ? getReference().getAnnotation(Priority.class).value() : 0;
+            int b = o.getReference().isAnnotationPresent(Priority.class) ? o.getReference().getAnnotation(Priority.class).value() : 0;
+
+            return Integer.compare(a, b);
+        }
     }
 
 }

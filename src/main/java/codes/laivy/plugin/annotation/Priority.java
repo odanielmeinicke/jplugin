@@ -50,22 +50,22 @@ import java.lang.annotation.Target;
  * <pre>
  * {@code
  * // A plugin with high priority (will load early)
- * @Plugin(name = "CorePlugin", description = "Handles core system functions")
- * @Priority(1)
+ * Plugin(name = "CorePlugin", description = "Handles core system functions")
+ * Priority(1)
  * public class CorePlugin {
  *     // Plugin implementation details...
  * }
  *
  * // A plugin with lower priority (will load later)
- * @Plugin(name = "ExtraPlugin", description = "Provides additional features")
- * @Priority(10)
+ * Plugin(name = "ExtraPlugin", description = "Provides additional features")
+ * Priority(10)
  * public class ExtraPlugin {
  *     // Plugin implementation details...
  * }
  *
  * // A plugin with default priority (-1), which will be loaded before plugins without @Priority
- * @Plugin(name = "MiddlewarePlugin", description = "Handles middleware tasks")
- * @Priority
+ * Plugin(name = "MiddlewarePlugin", description = "Handles middleware tasks")
+ * Priority
  * public class MiddlewarePlugin {
  *     // Plugin implementation details...
  * }
@@ -97,13 +97,16 @@ public @interface Priority {
      * <strong>Example:</strong>
      * <pre>
      * {@code
-     * @Priority(1)  // Higher priority: this plugin will be loaded early.
+     * Priority(1)  // Higher priority: this plugin will be loaded early.
+     * Plugin
      * public class ImportantPlugin { ... }
      *
-     * @Priority(10) // Lower priority: this plugin will be loaded after higher priority plugins.
+     * Priority(10) // Lower priority: this plugin will be loaded after higher priority plugins.
+     * Plugin
      * public class OptionalPlugin { ... }
      *
-     * @Priority // Equivalent to @Priority(-1), will load before plugins without @Priority.
+     * Priority // Equivalent to @Priority(-1), will load before plugins without @Priority.
+     * Plugin
      * public class DefaultPriorityPlugin { ... }
      * }
      * </pre>
