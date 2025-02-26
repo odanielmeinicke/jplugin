@@ -287,6 +287,14 @@ public interface PluginFinder {
     @NotNull PluginFinder addState(@NotNull PluginInfo.State state);
 
     /**
+     * Marks if the plugins should have a shutdown hook to automatically disable them
+     *
+     * @param shutdownHook true if the plugins should be automatically disabled
+     * @return This PluginFinder instance with the state filter updated.
+     */
+    @NotNull PluginFinder setShutdownHook(boolean shutdownHook);
+
+    /**
      * Determines whether a given {@link PluginInfo} matches the current filter criteria.
      *
      * @param info The PluginInfo object to test.

@@ -4,6 +4,7 @@ import codes.laivy.plugin.annotation.Priority;
 import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
+import codes.laivy.plugin.factory.PluginFinder;
 import codes.laivy.plugin.factory.handlers.Handlers;
 import codes.laivy.plugin.factory.handlers.PluginHandler;
 import codes.laivy.plugin.initializer.PluginInitializer;
@@ -163,7 +164,7 @@ public abstract class PluginInfo {
      * This behavior is integral to ensuring that plugins do not leave open resources or incomplete operations
      * when the application terminates.
      * <p>
-     * However, if the shutdown hook mechanism is disabled (for example, via {@link Plugins#setShutdownHook(boolean)}
+     * However, if the shutdown hook mechanism is disabled (for example, via {@link PluginFinder#setShutdownHook(boolean)}
      * with a value of {@code false}), then this flag will have no effect, as the shutdown hook will not trigger
      * the automatic closure of plugins.
      * </p>
@@ -181,7 +182,7 @@ public abstract class PluginInfo {
      * Conversely, setting it to {@code false} will prevent the plugin from being automatically closed.
      * <p>
      * <strong>Important:</strong> This setting is only effective if the shutdown hook mechanism is enabled.
-     * If the shutdown hook is disabled (e.g., by calling {@link Plugins#setShutdownHook(boolean)} with {@code false}),
+     * If the shutdown hook is disabled (e.g., by calling {@link PluginFinder#setShutdownHook(boolean)} with {@code false}),
      * then the value of {@code autoClose} will be ignored and the plugin will not be automatically closed on shutdown.
      * </p>
      *

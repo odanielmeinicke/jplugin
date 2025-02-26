@@ -10,6 +10,7 @@ import codes.laivy.plugin.annotation.Plugin;
 import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.InvalidPluginException;
 import codes.laivy.plugin.exception.PluginInitializeException;
+import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.factory.PluginFinder;
 import codes.laivy.plugin.factory.handlers.PluginHandler;
 import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
@@ -52,6 +53,8 @@ final class PluginFinderImpl implements PluginFinder {
 
     private final @NotNull Set<Object> instances = new HashSet<>();
     private final @NotNull Set<State> states = new HashSet<>();
+
+    private volatile boolean shutdownHook = true;
 
     public PluginFinderImpl(@NotNull PluginFactoryImpl factory) {
         this.factory = factory;
@@ -285,6 +288,14 @@ final class PluginFinderImpl implements PluginFinder {
     @Override
     public @NotNull PluginFinder addState(@NotNull State state) {
         states.add(state);
+        return this;
+    }
+
+    // Others
+
+    @Override
+    public @NotNull PluginFinder setShutdownHook(boolean shutdownHook) {
+        this.shutdownHook = shutdownHook;
         return this;
     }
 
@@ -583,6 +594,15 @@ final class PluginFinderImpl implements PluginFinder {
             }
         }
 
+        // Shutdown hook
+        @NotNull Set<PluginInfo> loadedPlugins = new LinkedHashSet<>();
+
+        if (shutdownHook) {
+            @NotNull ShutdownHook hook = new ShutdownHook(loadedPlugins);
+            Runtime.getRuntime().addShutdownHook(hook);
+        }
+
+        // Prepare to initialize
         main:
         for (@NotNull Builder builder : organize(builders.values())) {
             @NotNull Class<?> reference = builder.getReference();
@@ -625,6 +645,10 @@ final class PluginFinderImpl implements PluginFinder {
 
             try {
                 plugin.start();
+
+                if (plugin.isAutoClose()) {
+                    loadedPlugins.add(plugin);
+                }
             } catch (@NotNull PluginInitializeException e) {
                 throw e;
             } catch (@NotNull Throwable throwable) {
@@ -642,7 +666,7 @@ final class PluginFinderImpl implements PluginFinder {
         return plugins.values().toArray(new PluginInfo[0]);
     }
 
-    // Static initializers
+    // Utilities
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean checkPackageWithin(@NotNull String reference) {
@@ -697,14 +721,13 @@ final class PluginFinderImpl implements PluginFinder {
 
         return sorted;
     }
-
     private static @NotNull Set<Builder> organize(@NotNull Collection<@NotNull Builder> plugins) {
         @NotNull Set<Builder> sorted = new LinkedHashSet<>();
-        @NotNull List<Builder> remaining = new ArrayList<>(plugins);
+        @NotNull List<Builder> remaining = new LinkedList<>(plugins);
         @NotNull Map<Class<?>, Builder> builderByReference = plugins.stream().collect(Collectors.toMap(Builder::getReference, Function.identity()));
 
         while (!remaining.isEmpty()) {
-            @NotNull List<Builder> eligible = new ArrayList<>();
+            @NotNull List<Builder> eligible = new LinkedList<>();
 
             for (@NotNull Builder builder : remaining) {
                 boolean ready = true;
@@ -726,21 +749,64 @@ final class PluginFinderImpl implements PluginFinder {
             }
 
             eligible.sort((b1, b2) -> {
+                int cmp = b1.getComparable().compareTo(b2);
+                if (cmp != 0) return cmp;
+
                 int count1 = (int) remaining.stream().filter(b -> Arrays.asList(b.getDependencies()).contains(b1.getReference())).count();
                 int count2 = (int) remaining.stream().filter(b -> Arrays.asList(b.getDependencies()).contains(b2.getReference())).count();
 
-                if (count1 != count2) {
-                    return Integer.compare(count2, count1);
-                }
-
-                return b1.getComparable().compareTo(b2);
+                return Integer.compare(count2, count1);
             });
 
             @NotNull Builder chosen = eligible.get(0);
             sorted.add(chosen);
             remaining.remove(chosen);
         }
+
         return sorted;
+    }
+
+    // Classes
+
+    private static final class ShutdownHook extends Thread {
+
+        // Object
+
+        private final @NotNull Collection<PluginInfo> plugins;
+
+        public ShutdownHook(@NotNull Collection<PluginInfo> plugins) {
+            super("Plug-ins Shutdown Hook");
+            this.plugins = plugins;
+        }
+
+        // Getters
+
+        private @NotNull Collection<PluginInfo> getPlugins() {
+            return plugins;
+        }
+
+        // Modules
+
+        @Override
+        public void run() {
+            @NotNull List<PluginInfo> plugins = new LinkedList<>(getPlugins());
+            Collections.reverse(plugins);
+
+            // Loop
+            for (@NotNull PluginInfo info : plugins) {
+                if (!info.isAutoClose()) {
+                    continue;
+                } else if (info.getState() != PluginInfo.State.RUNNING) {
+                    continue;
+                }
+
+                try {
+                    info.close();
+                } catch (@NotNull PluginInterruptException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
     }
 
 }

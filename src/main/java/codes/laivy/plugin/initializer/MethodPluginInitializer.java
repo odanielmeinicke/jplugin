@@ -262,7 +262,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
                             ((Flushable) getInstance()).flush();
                         }
                     } catch (@NotNull IOException e) {
-                        throw new PluginInterruptException(getReference(), "cannot close/flush plugin instance: " + this);
+                        throw new PluginInterruptException(getReference(), "cannot close/flush plugin instance: " + this, e);
                     }
                 }
             } catch (@NotNull InvocationTargetException e) {

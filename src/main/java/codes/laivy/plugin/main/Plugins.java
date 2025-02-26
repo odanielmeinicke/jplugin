@@ -7,13 +7,8 @@ import codes.laivy.plugin.factory.PluginFactory;
 import codes.laivy.plugin.factory.PluginFinder;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * The Plugins class serves as a central utility and access point for the plugin framework.
@@ -24,9 +19,6 @@ import java.util.stream.Collectors;
  * are delegated to the active PluginFactory instance.
  * <p>
  * The class is designed to be non-instantiable; its constructor is private and throws an UnsupportedOperationException.
- * <p>
- * Upon class loading, a shutdown hook is registered with the runtime to ensure that all plugins are properly interrupted
- * when the application terminates. This guarantees a graceful shutdown of plugin resources.
  * <p>
  * Key functionalities provided by this class include:
  * <ul>
@@ -39,46 +31,6 @@ import java.util.stream.Collectors;
  * </ul>
  */
 public final class Plugins {
-
-    // Static initializers
-
-    private static @Nullable ShutdownHook hook = new ShutdownHook();
-
-    static {
-        Runtime.getRuntime().addShutdownHook(hook);
-    }
-
-    /**
-     * Enables or disables the shutdown hook for the plugin framework.
-     *
-     * <p>
-     * When the shutdown hook is enabled (by passing {@code true}), a shutdown hook is registered with the JVM.
-     * This hook ensures that all plugins are automatically interrupted and unloaded when the runtime terminates,
-     * allowing for a graceful shutdown of plugin resources.
-     * </p>
-     *
-     * <p>
-     * Conversely, if the shutdown hook is disabled (by passing {@code false}), the registered shutdown hook is removed.
-     * In this case, the framework will not automatically unload plugins when the application is shutting down.
-     * This behavior may be desirable in environments where plugin lifecycle management is handled externally.
-     * </p>
-     *
-     * <p>
-     * By default, the shutdown hook is active and enabled.
-     * </p>
-     *
-     * @param shutdownHook {@code true} to enable the shutdown hook and have plugins automatically unloaded on shutdown;
-     *                     {@code false} to disable it, requiring manual management of plugin unloading.
-     */
-    public static void setShutdownHook(boolean shutdownHook) {
-        if (hook != null && !shutdownHook) {
-            Runtime.getRuntime().removeShutdownHook(hook);
-            hook = null;
-        } else if (hook == null && shutdownHook) {
-            hook = new ShutdownHook();
-            Runtime.getRuntime().addShutdownHook(hook);
-        }
-    }
 
     // Factory
 
@@ -296,49 +248,6 @@ public final class Plugins {
      */
     private Plugins() {
         throw new UnsupportedOperationException("this class cannot be instantiated");
-    }
-
-    // Inner Classes
-
-    /**
-     * A shutdown hook that is registered with the JVM to interrupt all plugins when the application is shutting down.
-     * <p>
-     * The hook attempts to call {@link #interruptAll()} to ensure that all plugin resources are properly released.
-     * Any PluginInterruptException encountered during shutdown is wrapped in a RuntimeException.
-     */
-    private static final class ShutdownHook extends Thread {
-
-        /**
-         * Constructs a new ShutdownHook with a descriptive thread name.
-         */
-        public ShutdownHook() {
-            super("Plug-ins Shutdown Hook");
-        }
-
-        /**
-         * Invokes the interruption of all plugins during application shutdown.
-         * <p>
-         * If an exception occurs during the interruption process, it is wrapped in a RuntimeException and thrown.
-         */
-        @Override
-        public void run() {
-            @NotNull List<PluginInfo> plugins = factory.stream().distinct().collect(Collectors.toCollection(LinkedList::new));
-            Collections.reverse(plugins);
-
-            for (@NotNull PluginInfo info : plugins) {
-                if (!info.isAutoClose()) {
-                    continue;
-                } else if (info.getState() != PluginInfo.State.RUNNING) {
-                    continue;
-                }
-
-                try {
-                    info.close();
-                } catch (@NotNull PluginInterruptException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
     }
 
 }
