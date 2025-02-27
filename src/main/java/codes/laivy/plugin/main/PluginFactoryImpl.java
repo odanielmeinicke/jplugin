@@ -2,7 +2,6 @@ package codes.laivy.plugin.main;
 
 import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.PluginInfo.Builder;
-import codes.laivy.plugin.annotation.Priority;
 import codes.laivy.plugin.category.AbstractPluginCategory;
 import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.PluginInitializeException;
@@ -13,12 +12,27 @@ import codes.laivy.plugin.factory.handlers.Handlers;
 import codes.laivy.plugin.factory.handlers.PluginHandler;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.stream.Stream;
 
 final class PluginFactoryImpl implements PluginFactory {
+
+    // Static initializers
+
+    /**
+     * This map represents the libraries categories. The key represents the class name the runtime
+     * must have to load the category, the value represents the class of the category. The class of the category
+     * must have an empty declared constructor.
+     */
+    private static final @NotNull Map<String, String> libraries = new HashMap<String, String>() {{
+        put("com.jlogm.Logger", "codes.laivy.plugin.category.jlogm.FilterPluginCategory");
+    }};
 
     // Object
 
@@ -28,11 +42,40 @@ final class PluginFactoryImpl implements PluginFactory {
     final @NotNull Map<Class<?>, PluginInfo> plugins = new LinkedHashMap<>();
 
     public PluginFactoryImpl() {
-        // Just to initialize Plugins class (shutdown hook)
-        Class<Plugins> reference = Plugins.class;
-
         // Default categories
         setCategory(new AutoRegisterPluginCategory());
+
+        // Auto register library categories
+        for (@NotNull Entry<String, String> entry : libraries.entrySet()) {
+            // Verify if library is present at runtime
+            try {
+                Class.forName(entry.getKey());
+            } catch (@NotNull ClassNotFoundException ignore) {
+                continue;
+            }
+
+            // Load category
+            try {
+                @NotNull Class<?> reference = Class.forName(entry.getValue());
+
+                //noinspection unchecked
+                @NotNull Constructor<? extends PluginCategory> constructor = (Constructor<? extends PluginCategory>) reference.getDeclaredConstructor();
+                constructor.setAccessible(true);
+
+                @NotNull PluginCategory category = constructor.newInstance();
+                setCategory(category);
+            } catch (@NotNull ClassNotFoundException e) {
+                throw new RuntimeException("cannot find category class", e);
+            } catch (@NotNull NoSuchMethodException e) {
+                throw new RuntimeException("cannot find category constructor", e);
+            } catch (@NotNull InvocationTargetException e) {
+                throw new RuntimeException("cannot invoke category constructor", e);
+            } catch (@NotNull InstantiationException e) {
+                throw new RuntimeException("cannot instantiate category", e);
+            } catch (@NotNull IllegalAccessException e) {
+                throw new RuntimeException("cannot access category constructor", e);
+            }
+        }
     }
 
     // Getters
@@ -219,40 +262,29 @@ final class PluginFactoryImpl implements PluginFactory {
 
         @Override
         public boolean accept(@NotNull Builder builder) {
-            if (PluginCategory.class.isAssignableFrom(builder.getReference())) {
-                builder.comparable(o -> -1);
-                return true;
-            } else {
-                return false;
-            }
-        }
-        @Override
-        public boolean accept(@NotNull PluginInfo info) {
-            if (PluginCategory.class.isAssignableFrom(info.getReference())) {
-                info.getHandlers().add(new HandlerImpl(info.getReference()));
-
-                return true;
-            } else {
-                return false;
-            }
+            builder.comparable(o -> -10);
+            return true;
         }
 
         @Override
         public void start(@NotNull PluginInfo info) throws PluginInitializeException {
-            if (!(info.getInstance() instanceof PluginCategory)) {
-                throw new PluginInitializeException(info.getReference(), "the 'Category Reference' plugin doesn't have a plugin category instance: " + info.getInstance());
+            @Nullable Object instance = info.getInstance();
+
+            if (!(instance instanceof PluginCategory)) {
+                throw new PluginInitializeException(info.getReference(), "the 'Category Reference' plugin doesn't have a PluginCategory instance: " + instance);
             }
 
-            @NotNull PluginCategory category = (PluginCategory) info.getInstance();
+            @NotNull PluginCategory category = (PluginCategory) instance;
             categories.put(category.getName().toLowerCase(), category);
         }
         @Override
         public void close(@NotNull PluginInfo info) throws PluginInterruptException {
-            if (!(info.getInstance() instanceof PluginCategory)) {
-                throw new PluginInterruptException(info.getReference(), "the 'Category Reference' plugin doesn't have the plugin category instance: " + info.getInstance());
+            @Nullable Object instance = info.getInstance();
+            if (!(instance instanceof PluginCategory)) {
+                throw new PluginInterruptException(info.getReference(), "the 'Category Reference' plugin doesn't have the PluginCategory instance: " + instance);
             }
 
-            @NotNull PluginCategory category = (PluginCategory) info.getInstance();
+            @NotNull PluginCategory category = (PluginCategory) instance;
 
             category.getPlugins().clear();
             categories.remove(category.getName().toLowerCase());

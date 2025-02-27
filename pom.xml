@@ -55,6 +55,14 @@
             <artifactId>asm</artifactId>
             <version>9.7.1</version>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.ow2.asm/asm -->
+        <dependency>
+            <groupId>com.jlogm</groupId>
+            <artifactId>jlogm</artifactId>
+            <version>1.0</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
