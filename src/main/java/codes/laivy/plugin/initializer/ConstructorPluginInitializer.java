@@ -163,13 +163,18 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
         @Override
         public void start() throws PluginInitializeException {
             try {
+                // Starting
+                setState(State.STARTING);
+                handle("start", (handler) -> handler.start(this));
+
+                // Generate instance
                 @NotNull Constructor<?> constructor = getReference().getDeclaredConstructor();
                 constructor.setAccessible(true);
                 // Instantiate the plugin using its no-argument constructor.
                 this.instance = constructor.newInstance();
 
-                // Super start
-                super.start();
+                // Mark as running
+                setState(State.RUNNING);
             } catch (@NotNull Throwable throwable) {
                 setState(State.FAILED);
                 if (throwable instanceof InvocationTargetException) {
@@ -216,6 +221,9 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                 return;
             }
 
+            // Super close
+            super.close();
+
             try {
                 if (getInstance() instanceof Closeable) {
                     ((Closeable) getInstance()).close();
@@ -230,10 +238,11 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                 throw new PluginInterruptException(getReference(), "cannot close/flush plugin instance: " + this, e);
             }
 
-            // Super close
+            // Finish close
             try {
-                super.close();
+                handle("close", (handler) -> handler.close(this));
             } finally {
+                setState(State.IDLE);
                 instance = null;
             }
         }

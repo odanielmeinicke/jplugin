@@ -3,6 +3,8 @@ package codes.laivy.plugin.initializer;
 import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.PluginInfo.Builder;
 import codes.laivy.plugin.category.PluginCategory;
+import codes.laivy.plugin.exception.PluginInitializeException;
+import codes.laivy.plugin.exception.PluginInterruptException;
 import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -71,6 +73,29 @@ public final class StaticPluginInitializer implements PluginInitializer {
          */
         public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories) {
             super(reference, name, description, dependencies, categories, StaticPluginInitializer.class);
+        }
+
+        @Override
+        public void start() throws PluginInitializeException {
+            // Starting
+            setState(State.STARTING);
+            handle("start", (handler) -> handler.start(this));
+
+            // Mark as running
+            setState(State.RUNNING);
+        }
+        @Override
+        public void close() throws PluginInterruptException {
+            // Super close
+            super.close();
+
+            // Finish close
+            try {
+                handle("close", (handler) -> handler.close(this));
+            } finally {
+                setState(State.IDLE);
+                instance = null;
+            }
         }
 
     }

@@ -304,13 +304,7 @@ public abstract class PluginInfo {
      *
      * @throws PluginInitializeException If an error occurs during the startup sequence.
      */
-    public void start() throws PluginInitializeException {
-        setState(State.STARTING);
-        handle("start", (handler) -> handler.start(this));
-
-        // Mark as running
-        setState(State.RUNNING);
-    }
+    public abstract void start() throws PluginInitializeException;
 
     /**
      * Initiates the shutdown process for the plugin.
@@ -340,13 +334,6 @@ public abstract class PluginInfo {
 
         // Transition to stopping state and trigger close handlers.
         setState(State.STOPPING);
-
-        try {
-            handle("close", (handler) -> handler.close(this));
-        } finally {
-            setState(State.IDLE);
-            instance = null;
-        }
     }
 
     // Equality and String Representation
@@ -453,7 +440,7 @@ public abstract class PluginInfo {
      * @param action   A descriptive label for the action being performed.
      * @param consumer A consumer that performs the action on each PluginHandler.
      */
-    private void handle(@NotNull String action, @NotNull ThrowingConsumer<PluginHandler> consumer) {
+    protected void handle(@NotNull String action, @NotNull ThrowingConsumer<PluginHandler> consumer) {
         // Invoke plugin-specific handlers.
         for (@NotNull PluginHandler handler : getHandlers()) {
             try {
@@ -490,7 +477,7 @@ public abstract class PluginInfo {
         }
     }
     @FunctionalInterface
-    private interface ThrowingConsumer<T> {
+    protected interface ThrowingConsumer<T> {
         /**
          * Performs this operation on the given argument.
          *

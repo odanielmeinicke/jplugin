@@ -161,6 +161,11 @@ public final class MethodPluginInitializer implements PluginInitializer {
         @Override
         public void start() throws PluginInitializeException {
             try {
+                // Starting
+                setState(State.STARTING);
+                handle("start", (handler) -> handler.start(this));
+
+                // Initialize by method
                 @NotNull Method method = getReference().getDeclaredMethod("initialize");
                 method.setAccessible(true);
                 // Verify that the initialize method is static; if not, throw an exception.
@@ -170,8 +175,8 @@ public final class MethodPluginInitializer implements PluginInitializer {
                 // Invoke the static initialize method. It may return an instance or be void.
                 this.instance = method.invoke(null);
 
-                // Super start
-                super.start();
+                // Mark as running
+                setState(State.RUNNING);
             } catch (@NotNull Throwable throwable) {
                 setState(State.FAILED);
                 if (throwable instanceof InvocationTargetException) {
@@ -230,6 +235,10 @@ public final class MethodPluginInitializer implements PluginInitializer {
             if (!getState().isRunning()) {
                 return;
             }
+
+            // Super close
+            super.close();
+
             try {
                 @Nullable Method method = null;
                 for (@NotNull Method target : getReference().getDeclaredMethods()) {
@@ -275,10 +284,11 @@ public final class MethodPluginInitializer implements PluginInitializer {
                 throw new PluginInterruptException(getReference(), "cannot access interrupt method", e);
             }
 
-            // Super close
+            // Finish close
             try {
-                super.close();
+                handle("close", (handler) -> handler.close(this));
             } finally {
+                setState(State.IDLE);
                 instance = null;
             }
         }
