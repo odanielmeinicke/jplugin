@@ -174,6 +174,7 @@ public abstract class PluginInfo {
     public boolean isAutoClose() {
         return autoClose;
     }
+
     /**
      * Configures whether the plugin should be automatically closed during system shutdown.
      * <p>

@@ -12,6 +12,7 @@ Welcome to the **JPlugin Framework**! This framework is designed to simplify and
    - [@Initializer](#initializer)
    - [@Dependency](#dependency)
    - [@Category](#category)
+   - [@Priority](#priority)
 5. [Usage Examples](#usage-examples)
    - [How to initialize the plugins](#plug-in-initialization-methods)
    - [Basic Plug-in Example](#basic-plug-in-example)
@@ -207,6 +208,45 @@ public static void main(String[] args) {
 
 #### Parameters
 1. `name`: A unique identifier for the category the plugin belongs to. This helps in filtering and managing plugins by functionality.
+
+### @Priority
+
+The **@Priority** annotation defines the loading priority of a plugin within the system. It allows developers to specify an integer value that determines the order in which plugins are initialized. In this context, lower integer values represent higher priority, meaning that plugins with lower numbers are loaded before those with higher numbers.
+
+#### Default Behavior
+- **No Annotation:** If a plugin does not have the **@Priority** annotation, it is assumed to have a default priority of `0`.
+- **Annotation Without a Value:** If a plugin is annotated with **@Priority** without explicitly specifying a value, it defaults to `-1`. This effectively gives such plugins a higher priority compared to plugins that rely on the default `0`.
+
+#### Loading Order
+Plugins are loaded in ascending order based on their priority values. For example:
+- A plugin annotated with `@Priority(-5)` will be loaded **before** a plugin annotated with `@Priority(2)`.
+
+#### Dependency Considerations
+In frameworks that are dependency-aware, the dependency relationships always take precedence over numeric priority values. This means that if Plugin A is a dependency of Plugin B, Plugin A will be loaded first, regardless of the numerical priorities assigned.
+
+#### Usage Examples
+```java
+// A plugin with a higher priority (loaded earlier)
+@Priority(1)
+@Plugin(name = "CorePlugin", description = "Handles core system functions")
+public class CorePlugin {
+   // Plugin implementation details...
+}
+
+// A plugin with a lower priority (loaded later)
+@Priority(10)
+@Plugin(name = "ExtraPlugin", description = "Provides additional features")
+public class ExtraPlugin {
+   // Plugin implementation details...
+}
+
+// A plugin with default priority (-1), which will load before plugins without @Priority annotation
+@Priority
+@Plugin(name = "MiddlewarePlugin", description = "Handles middleware tasks")
+public class MiddlewarePlugin {
+   // Plugin implementation details...
+}
+```
 
 ---
 
