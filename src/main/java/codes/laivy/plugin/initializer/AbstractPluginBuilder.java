@@ -27,12 +27,16 @@ abstract class AbstractPluginBuilder implements Builder {
     protected final @NotNull Set<PluginCategory> registeredCategories = new LinkedHashSet<>();
 
     protected final @NotNull Set<Class<?>> dependencies = new LinkedHashSet<>();
-    private @NotNull Comparable<Builder> comparable = new DefaultComparable();
+    private int priority = 0;
 
     private final @NotNull Handlers handlers = Handlers.create();
 
     public AbstractPluginBuilder(@NotNull Class<?> reference) {
         this.reference = reference;
+
+        if (reference.isAnnotationPresent(Priority.class)) {
+            this.priority = reference.getAnnotation(Priority.class).value();
+        }
     }
 
     // Getters
@@ -62,8 +66,8 @@ abstract class AbstractPluginBuilder implements Builder {
     }
 
     @Override
-    public @NotNull Comparable<Builder> getComparable() {
-        return comparable;
+    public int getPriority() {
+        return priority;
     }
 
     // Setters
@@ -131,8 +135,8 @@ abstract class AbstractPluginBuilder implements Builder {
     }
 
     @Override
-    public @NotNull Builder comparable(@NotNull Comparable<Builder> comparable) {
-        this.comparable = comparable;
+    public @NotNull Builder priority(int priority) {
+        this.priority = priority;
         return this;
     }
 

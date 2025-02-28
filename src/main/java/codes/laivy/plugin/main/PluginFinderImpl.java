@@ -724,7 +724,8 @@ final class PluginFinderImpl implements PluginFinder {
     private static @NotNull Set<Builder> organize(@NotNull Collection<@NotNull Builder> plugins) {
         @NotNull Set<Builder> sorted = new LinkedHashSet<>();
         @NotNull List<Builder> remaining = new LinkedList<>(plugins);
-        @NotNull Map<Class<?>, Builder> builderByReference = plugins.stream().collect(Collectors.toMap(Builder::getReference, Function.identity()));
+        @NotNull Map<Class<?>, Builder> builderByReference = plugins.stream()
+                .collect(Collectors.toMap(Builder::getReference, Function.identity()));
 
         while (!remaining.isEmpty()) {
             @NotNull List<Builder> eligible = new LinkedList<>();
@@ -733,7 +734,6 @@ final class PluginFinderImpl implements PluginFinder {
                 boolean ready = true;
                 for (@NotNull Class<?> dependency : builder.getDependencies()) {
                     @NotNull Builder dependencyBuilder = builderByReference.get(dependency);
-
                     if (dependencyBuilder != null && !sorted.contains(dependencyBuilder)) {
                         ready = false;
                         break;
@@ -748,15 +748,8 @@ final class PluginFinderImpl implements PluginFinder {
                 throw new IllegalStateException("cyclic or unresolved dependencies detected: " + remaining);
             }
 
-            eligible.sort((b1, b2) -> {
-                int cmp = b1.getComparable().compareTo(b2);
-                if (cmp != 0) return cmp;
-
-                int count1 = (int) remaining.stream().filter(b -> Arrays.asList(b.getDependencies()).contains(b1.getReference())).count();
-                int count2 = (int) remaining.stream().filter(b -> Arrays.asList(b.getDependencies()).contains(b2.getReference())).count();
-
-                return Integer.compare(count2, count1);
-            });
+            // Ordena os builders elegíveis pela prioridade (prioridade menor vem primeiro)
+            eligible.sort(Comparator.comparingInt(Builder::getPriority));
 
             @NotNull Builder chosen = eligible.get(0);
             sorted.add(chosen);

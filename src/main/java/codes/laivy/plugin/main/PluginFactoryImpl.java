@@ -262,7 +262,7 @@ final class PluginFactoryImpl implements PluginFactory {
 
         @Override
         public boolean accept(@NotNull Builder builder) {
-            builder.comparable(o -> -10);
+            builder.priority(-10);
             return true;
         }
 

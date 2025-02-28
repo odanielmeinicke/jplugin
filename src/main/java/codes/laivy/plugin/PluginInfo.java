@@ -112,6 +112,11 @@ public abstract class PluginInfo {
     private final @NotNull Class<? extends PluginInitializer> initializer;
 
     /**
+     * The loading priority to determine the order which this plugin should be initialized according to others.
+     */
+    private final int priority;
+
+    /**
      * The current lifecycle state of the plugin. This field is volatile to ensure proper visibility across threads.
      */
     private @NotNull State state = State.IDLE;
@@ -142,16 +147,18 @@ public abstract class PluginInfo {
      * @param dependencies An array of PluginInfo objects that this plugin depends on.
      * @param categories   An array of category names for organizing the plugin.
      * @param initializer  The PluginInitializer class responsible for initializing the plugin.
+     * @param priority     The loading priority for this plugin.
      */
     public PluginInfo(@NotNull Class<?> reference, @Nullable String name, @Nullable String description,
                       @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories,
-                      @NotNull Class<? extends PluginInitializer> initializer) {
+                      @NotNull Class<? extends PluginInitializer> initializer, int priority) {
         this.name = name;
         this.description = description;
         this.reference = reference;
         this.dependencies = new LinkedHashSet<>(Arrays.asList(dependencies));
         this.categories = new HashSet<>(Arrays.asList(categories));
         this.initializer = initializer;
+        this.priority = priority;
     }
 
     // Getters
@@ -223,10 +230,12 @@ public abstract class PluginInfo {
         @NotNull State previous = this.state;
         this.state = state;
 
-        handle("change state", (handler) -> handler.state(this, previous));
+        if (previous != state) {
+            handle("change state", (handler) -> handler.state(this, previous));
 
-        if (state == State.RUNNING) {
-            handle("mark as running", (handler) -> handler.run(this));
+            if (state == State.RUNNING) {
+                handle("mark as running", (handler) -> handler.run(this));
+            }
         }
     }
 
@@ -274,6 +283,29 @@ public abstract class PluginInfo {
      */
     public @NotNull Class<? extends PluginInitializer> getInitializer() {
         return initializer;
+    }
+
+    /**
+     * Returns the numeric priority value associated with this PluginInfo instance.
+     * <p>
+     * The priority determines the order in which plugins are loaded by the framework.
+     * Lower numeric values indicate a higher priority, meaning that a plugin with a lower priority value
+     * is loaded before those with higher values.
+     * <p>
+     * The default priority is 0. This means that if a plugin does not explicitly specify a different priority,
+     * it will be considered to have a baseline loading order of 0. Plugins with a priority lower than 0 will be loaded
+     * earlier, while those with a priority higher than 0 will be loaded later.
+     * <p>
+     * It is important to note that the priority value is used in conjunction with dependency resolution:
+     * even if a plugin has a high priority (i.e., a lower numeric value), it will still be loaded only after all
+     * its dependencies have been successfully resolved.
+     * <p>
+     * This value can be changed at using the {@link Priority} annotation or at the Builder state using categories or handlers
+     *
+     * @return an integer representing the plugin's loading priority; lower values denote higher priority.
+     */
+    public int getPriority() {
+        return priority;
     }
 
     /**
@@ -552,7 +584,20 @@ public abstract class PluginInfo {
          */
         @NotNull Handlers getHandlers();
 
-        @NotNull Comparable<Builder> getComparable();
+        /**
+         * Retrieves the current numeric priority value configured in this Builder.
+         * <p>
+         * The priority value is used to determine the order in which plugins are loaded by the framework.
+         * Lower numeric values indicate higher priority, meaning that a plugin with a priority of 1 will be loaded
+         * before a plugin with a priority of 10. This value is a key criterion during the plugin initialization process,
+         * especially when multiple plugins are competing for early loading.
+         * <p>
+         * If no explicit priority is set using the {@link #priority(int)} method, the default value is 0. You can
+         * customize it using the {@code @Priority} annotation (or an explicitly set priority).
+         *
+         * @return an integer representing the current priority value of this Builder; lower numbers denote higher priority.
+         */
+        int getPriority();
 
         // Setters
 
@@ -565,29 +610,22 @@ public abstract class PluginInfo {
         @NotNull Builder name(@Nullable String name);
 
         /**
-         * Sets the {@link Comparable} instance for the plugin, allowing customization of the loading order.
+         * Sets the numeric priority for this Builder.
          * <p>
-         * This method allows defining a comparison mechanism that determines the order in which plugins are loaded.
-         * If the current builder is considered <i>less than</i> (negative return value) the specified builder,
-         * it will be loaded first.
+         * The priority value determines the order in which the plugin is loaded relative to other plugins.
+         * Lower values indicate a higher priority. For instance, setting a priority of 1 will cause this plugin to be loaded
+         * before a plugin with a priority of 10.
          * <p>
-         * The default comparison mechanism relies on the {@link Priority} annotation. If both plugin classes
-         * lack this annotation, they are considered equal in terms of priority in the default implementation.
-         * Developers can override this behavior by providing a custom comparator that dictates the order
-         * in which plugins should be loaded.
+         * If no explicit priority is set using this method, the default value is 0. You can
+         * customize it using the {@code @Priority} annotation (or an explicitly set priority with this method).
          * <p>
-         * <strong>Usage Example:</strong>
-         * <pre>
-         * {@code
-         * Builder builderA = new Builder().comparable((b1, b2) -> Integer.compare(b1.getPriority(), b2.getPriority()));
-         * Builder builderB = new Builder().comparable((b1, b2) -> -1); // Forces builderB to always load first
-         * }
-         * </pre>
+         * This priority setting works in tandem with dependency ordering; even if a plugin has a high priority (lower number),
+         * it will still be loaded only after all of its dependencies have been resolved and loaded.
          *
-         * @param comparable the {@link Comparable} instance that will define how this builder is compared to others.
-         * @return the current {@link Builder} instance for method chaining.
+         * @param priority the integer value to assign as the plugin's priority; lower values denote higher priority.
+         * @return the current {@link Builder} instance, allowing for method chaining.
          */
-        @NotNull Builder comparable(@NotNull Comparable<Builder> comparable);
+        @NotNull Builder priority(int priority);
 
         /**
          * Sets the description for the plugin.

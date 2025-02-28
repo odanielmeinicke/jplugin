@@ -2,14 +2,13 @@ package codes.laivy.plugin.category.jlogm;
 
 import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.category.AbstractPluginCategory;
-import codes.laivy.plugin.category.PluginCategory;
 import com.jlogm.Filter;
 import com.jlogm.Logger;
 import com.jlogm.factory.LoggerFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static codes.laivy.plugin.PluginInfo.*;
+import static codes.laivy.plugin.PluginInfo.Builder;
 
 final class FilterPluginCategory extends AbstractPluginCategory {
 
@@ -26,7 +25,7 @@ final class FilterPluginCategory extends AbstractPluginCategory {
     // Modules
 
     public boolean accept(@NotNull Builder builder) {
-        builder.comparable(o -> -9);
+        builder.priority(-9);
         return true;
     }
 

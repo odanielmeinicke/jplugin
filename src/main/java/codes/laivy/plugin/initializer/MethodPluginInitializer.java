@@ -121,13 +121,15 @@ public final class MethodPluginInitializer implements PluginInitializer {
          * @param description  A description of the plugin, which may be null.
          * @param dependencies An array of {@link PluginInfo} objects representing required dependencies.
          * @param categories   An array of category tags for the plugin.
+         * @param priority     The priority of this plugin
          */
         public PluginInfoImpl(@NotNull Class<?> reference,
                               @Nullable String name,
                               @Nullable String description,
                               @NotNull PluginInfo @NotNull [] dependencies,
-                              @NotNull PluginCategory @NotNull [] categories) {
-            super(reference, name, description, dependencies, categories, MethodPluginInitializer.class);
+                              @NotNull PluginCategory @NotNull [] categories,
+                              int priority) {
+            super(reference, name, description, dependencies, categories, MethodPluginInitializer.class, priority);
         }
 
         /**
@@ -311,7 +313,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
 
         @Override
         public @NotNull PluginInfo build() {
-            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getFactory().getCategory(category)).toArray(PluginCategory[]::new));
+            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getFactory().getCategory(category)).toArray(PluginCategory[]::new), getPriority());
             info.getCategories().addAll(registeredCategories);
 
             return info;

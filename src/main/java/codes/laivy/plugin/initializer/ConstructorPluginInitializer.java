@@ -123,13 +123,15 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
          * @param description  A description of the plugin's functionality; may be null.
          * @param dependencies An array of {@link PluginInfo} objects representing the plugin's dependencies.
          * @param categories   An array of category tags used to classify the plugin.
+         * @param priority     The priority of this plugin
          */
         public PluginInfoImpl(@NotNull Class<?> reference,
                               @Nullable String name,
                               @Nullable String description,
                               @NotNull PluginInfo @NotNull [] dependencies,
-                              @NotNull PluginCategory @NotNull [] categories) {
-            super(reference, name, description, dependencies, categories, ConstructorPluginInitializer.class);
+                              @NotNull PluginCategory @NotNull [] categories,
+                              int priority) {
+            super(reference, name, description, dependencies, categories, ConstructorPluginInitializer.class, priority);
         }
 
         /**
@@ -265,7 +267,7 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
 
         @Override
         public @NotNull PluginInfo build() {
-            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getFactory().getCategory(category)).toArray(PluginCategory[]::new));
+            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getFactory().getCategory(category)).toArray(PluginCategory[]::new), getPriority());
             info.getCategories().addAll(registeredCategories);
 
             return info;
