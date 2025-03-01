@@ -267,11 +267,11 @@ final class PluginFactoryImpl implements PluginFactory {
         }
 
         @Override
-        public void start(@NotNull PluginInfo info) throws PluginInitializeException {
+        public void run(@NotNull PluginInfo info) {
             @Nullable Object instance = info.getInstance();
 
             if (!(instance instanceof PluginCategory)) {
-                throw new PluginInitializeException(info.getReference(), "the 'Category Reference' plugin doesn't have a PluginCategory instance: " + instance);
+                throw new IllegalStateException("the 'Category Reference' plugin doesn't have a PluginCategory instance: " + instance);
             }
 
             @NotNull PluginCategory category = (PluginCategory) instance;
