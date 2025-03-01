@@ -168,33 +168,42 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                 // Starting
                 setState(State.STARTING);
                 handle("start", (handler) -> handler.start(this));
+            } catch (@NotNull Throwable throwable) {
+                setState(State.FAILED);
+                throw new RuntimeException("cannot invoke 'starting' handlers " + getReference().getName(), throwable);
+            }
+
+            try {
 
                 // Generate instance
                 @NotNull Constructor<?> constructor = getReference().getDeclaredConstructor();
                 constructor.setAccessible(true);
                 // Instantiate the plugin using its no-argument constructor.
                 this.instance = constructor.newInstance();
-
-                // Mark as running
-                setState(State.RUNNING);
             } catch (@NotNull Throwable throwable) {
                 setState(State.FAILED);
+
                 if (throwable instanceof InvocationTargetException) {
                     if (throwable.getCause() instanceof PluginInitializeException) {
                         throw (PluginInitializeException) throwable.getCause();
                     }
-                    throw new PluginInitializeException(getReference(), "cannot invoke constructor from class: " +
-                            getReference().getName(), throwable.getCause());
+
+                    throw new PluginInitializeException(getReference(), "cannot invoke constructor from class: " + getReference().getName(), throwable.getCause());
                 } else if (throwable instanceof NoSuchMethodException) {
-                    throw new PluginInitializeException(getReference(), "there's no declared empty constructor at plugin's class: " +
-                            getReference().getName(), throwable);
+                    throw new PluginInitializeException(getReference(), "there's no declared empty constructor at plugin's class: " + getReference().getName(), throwable);
                 } else if (throwable instanceof IllegalAccessException) {
-                    throw new PluginInitializeException(getReference(), "cannot access declared empty constructor from plugin's class: " +
-                            getReference().getName(), throwable);
+                    throw new PluginInitializeException(getReference(), "cannot access declared empty constructor from plugin's class: " + getReference().getName(), throwable);
                 } else {
-                    throw new RuntimeException("cannot invoke declared empty constructor from plugin: " +
-                            getReference().getName(), throwable);
+                    throw new RuntimeException("cannot invoke declared empty constructor from plugin: " + getReference().getName(), throwable);
                 }
+            }
+
+            try {
+                // Mark as running
+                setState(State.RUNNING);
+            } catch (@NotNull Throwable throwable) {
+                setState(State.FAILED);
+                throw new RuntimeException("cannot invoke 'running' handlers " + getReference().getName(), throwable);
             }
         }
 

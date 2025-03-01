@@ -242,52 +242,52 @@ public final class MethodPluginInitializer implements PluginInitializer {
             super.close();
 
             try {
-                @Nullable Method method = null;
-                for (@NotNull Method target : getReference().getDeclaredMethods()) {
-                    if (!target.getName().equals("interrupt")) {
-                        continue;
-                    } else if (!Modifier.isStatic(target.getModifiers())) {
-                        continue;
-                    } else if (target.getParameterCount() > 1) {
-                        continue;
-                    }
-
-                    method = target;
-                    break;
-                }
-
-                // If an interrupt method is found, invoke it. The method may accept one parameter (the plugin instance)
-                // or no parameters. If invoked, resource cleanup via Closeable/Flushable is bypassed.
-                if (method != null) {
-                    method.setAccessible(true);
-                    if (method.getParameterCount() == 1) {
-                        method.invoke(null, getInstance());
-                    } else {
-                        method.invoke(null);
-                    }
-                } else if (getInstance() != null) {
-                    try {
-                        if (getInstance() instanceof Closeable) {
-                            ((Closeable) getInstance()).close();
-                        } else if (getInstance() instanceof Flushable) {
-                            ((Flushable) getInstance()).flush();
+                try {
+                    @Nullable Method method = null;
+                    for (@NotNull Method target : getReference().getDeclaredMethods()) {
+                        if (!target.getName().equals("interrupt")) {
+                            continue;
+                        } else if (!Modifier.isStatic(target.getModifiers())) {
+                            continue;
+                        } else if (target.getParameterCount() > 1) {
+                            continue;
                         }
-                    } catch (@NotNull IOException e) {
-                        throw new PluginInterruptException(getReference(), "cannot close/flush plugin instance: " + this, e);
+
+                        method = target;
+                        break;
                     }
-                }
-            } catch (@NotNull InvocationTargetException e) {
-                if (e.getCause() instanceof PluginInterruptException) {
-                    throw (PluginInterruptException) e.getCause();
+
+                    // If an interrupt method is found, invoke it. The method may accept one parameter (the plugin instance)
+                    // or no parameters. If invoked, resource cleanup via Closeable/Flushable is bypassed.
+                    if (method != null) {
+                        method.setAccessible(true);
+                        if (method.getParameterCount() == 1) {
+                            method.invoke(null, getInstance());
+                        } else {
+                            method.invoke(null);
+                        }
+                    } else if (getInstance() != null) {
+                        try {
+                            if (getInstance() instanceof Closeable) {
+                                ((Closeable) getInstance()).close();
+                            } else if (getInstance() instanceof Flushable) {
+                                ((Flushable) getInstance()).flush();
+                            }
+                        } catch (@NotNull IOException e) {
+                            throw new PluginInterruptException(getReference(), "cannot close/flush plugin instance: " + this, e);
+                        }
+                    }
+                } catch (@NotNull InvocationTargetException e) {
+                    if (e.getCause() instanceof PluginInterruptException) {
+                        throw (PluginInterruptException) e.getCause();
+                    }
+
+                    throw new PluginInterruptException(getReference(), "cannot invoke interrupt method", e);
+                } catch (@NotNull IllegalAccessException e) {
+                    throw new PluginInterruptException(getReference(), "cannot access interrupt method", e);
                 }
 
-                throw new PluginInterruptException(getReference(), "cannot invoke interrupt method", e);
-            } catch (@NotNull IllegalAccessException e) {
-                throw new PluginInterruptException(getReference(), "cannot access interrupt method", e);
-            }
-
-            // Finish close
-            try {
+                // Finish close
                 handle("close", (handler) -> handler.close(this));
             } finally {
                 setState(State.IDLE);
