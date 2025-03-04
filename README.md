@@ -124,7 +124,7 @@ import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
 
 import java.io.Closeable;
 
-@Initializer(type = ConstructorPluginInitializer.class) // This is the default initializer!
+@Initializer(ConstructorPluginInitializer.class) // This is the default initializer!
 @Plugin(name = "Initializer Plug-in", description = "A plugin with a custom initializer.")
 public class InitializerPlugin implements Closeable {
    public InitializerPlugin() {
@@ -151,18 +151,18 @@ Usage
 import codes.laivy.plugin.annotation.Initializer;
 import codes.laivy.plugin.initializer.MethodPluginInitializer;
 
-@Dependency(type = SomeLibrary.class) // It can have multiples dependencies!
-@Initializer(type = MethodPluginInitializer.class)
+@Dependency(SomeLibrary.class) // It can have multiples dependencies!
+@Initializer(MethodPluginInitializer.class)
 @Plugin(name = "LibraryDependentPlugin", description = "A plugin that uses SomeLibrary.")
 public class LibraryDependentPlugin {
-   public static void initialize() {
-      // This plugin only will be initialized when SomeLibrary has initialized.
-      SomeLibrary.doSomething();
-   }
+    public static void initialize() {
+        // This plugin only will be initialized when SomeLibrary has initialized.
+        SomeLibrary.doSomething();
+    }
 
-   public static void interrupt() {
-      // This plugin will be interrupted BEFORE the dependencies
-   }
+    public static void interrupt() {
+        // This plugin will be interrupted BEFORE the dependencies
+    }
 }
 ```
 
@@ -175,8 +175,8 @@ The @Category annotation represents a category for a plugin, allowing the additi
 Usage
 
 ```java
-@Category(name = "Utility") // It can have multiples categories!
-@Initializer(type = MethodPluginInitializer.class)
+@Category("Utility") // It can have multiples categories!
+@Initializer(MethodPluginInitializer.class)
 @Plugin(name = "Utility Plug-in", description = "A plugin that falls under the utility category.")
 public class UtilityPlugin {
    public static void initialize() {
@@ -290,7 +290,7 @@ public static void main(String[] args) {
 Here’s how to create a simple plug-in using the framework. This example will demonstrate the minimal setup required to get a plug-in running.
 
 ```java
-@Initializer(type = MethodPluginInitializer.class)
+@Initializer(MethodPluginInitializer.class)
 @Plugin(name = "HelloWorldPlugin", description = "A simple plug-in that greets users.")
 public class HelloWorldPlugin {
    public static void initialize() {
@@ -311,8 +311,8 @@ Let's create a plug-in that depends on an external library, ensuring that the re
 /**
  * First, it loads all the books (Book plug-in) before the bookshelf to control them.
  */
-@Dependency(type = Book.class)
-@Initializer(type = MethodPluginInitializer.class)
+@Dependency(Book.class)
+@Initializer(MethodPluginInitializer.class)
 @Plugin(name = "Bookshelf", description = "A mastered controller of the books")
 public class Bookshelf {
    public static void initialize() {
@@ -340,20 +340,19 @@ import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
  * <p>
  * It uses the {@link ConstructorPluginInitializer} that initializes using the class constructor, not the {@code initialize} methods.
  */
-@Category(name = "HTTP Page")
-@Initializer(type = ConstructorPluginInitializer.class) // Initializes using the empty declared constructor
+@Category("HTTP Page")
 @Plugin(name = "Authentication Page", description = "The authentication page that allow users to access the dashboard at the website.")
 final class Authentication extends Page {
 
-   // The constructor must have no parameters, and could have any visilibity.
-   private Authentication() {
-      super("/authentication"); // The page path
-   }
+    // The constructor must have no parameters, and could have any visilibity.
+    private Authentication() {
+        super("/authentication"); // The page path
+    }
 
-   @Override
-   public void execute(HttpClient client, HttpData data) {
-      // Do stuff here
-   }
+    @Override
+    public void execute(HttpClient client, HttpData data) {
+        // Do stuff here
+    }
 
 }
 ```
@@ -439,7 +438,7 @@ public final class MyPluginInitializer extends PluginInitializer {
 ```
 
 ```java
-@Initializer(type = MyPluginInitializer.class)
+@Initializer(MyPluginInitializer.class)
 @Plugin(name = "CustomInitializerPlugin", description = "A plug-in with a custom initializer.")
 public class CustomInitializerPlugin {
    // The initialization method should be created by you.

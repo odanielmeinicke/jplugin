@@ -52,7 +52,7 @@ public @interface Plugin {
      *
      * @return The plugin name.
      */
-    @NotNull String name() default "";
+    @NotNull String value() default "";
 
     /**
      * A brief description of the plugin's functionality.

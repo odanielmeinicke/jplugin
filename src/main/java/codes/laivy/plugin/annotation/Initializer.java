@@ -45,5 +45,5 @@ public @interface Initializer {
      *
      * @return The initializer class type.
      */
-    @NotNull Class<? extends PluginInitializer> type();
+    @NotNull Class<? extends PluginInitializer> value();
 }
