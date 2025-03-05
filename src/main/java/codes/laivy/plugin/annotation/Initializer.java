@@ -28,7 +28,7 @@ import java.lang.annotation.Target;
  * <p>
  * <strong>Example Usage:</strong>
  * <pre>{@code
- * Initializer(type = ConstructorPluginInitializer.class)
+ * Initializer(ConstructorPluginInitializer.class)
  * Plugin(name = "Cool Plugin", description = "A cool plugin designed by Daniel Meinicke")
  * public class MyPlugin {
  *     // Plugin implementation details

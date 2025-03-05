@@ -336,7 +336,7 @@ final class PluginFinderImpl implements PluginFinder {
         }
 
         @NotNull ClassLoader classLoader = reference.getClassLoader();
-        @NotNull Set<String> categories = Arrays.stream(reference.getAnnotationsByType(Category.class)).map(Category::name).map(String::toLowerCase).collect(Collectors.toSet());
+        @NotNull Set<String> categories = Arrays.stream(reference.getAnnotationsByType(Category.class)).map(Category::value).map(String::toLowerCase).collect(Collectors.toSet());
         @NotNull String packge = reference.getPackage().getName();
         @NotNull Class<? extends PluginInitializer> initializer = reference.isAnnotationPresent(Initializer.class) ? reference.getAnnotation(Initializer.class).type() : ConstructorPluginInitializer.class;
         @NotNull String name = reference.getAnnotation(Plugin.class).name();
@@ -554,13 +554,13 @@ final class PluginFinderImpl implements PluginFinder {
             @NotNull Set<String> unregisteredCategories = new LinkedHashSet<>();
             @NotNull Set<PluginCategory> registeredCategories = new LinkedHashSet<>();
             for (@NotNull Category category : reference.getAnnotationsByType(Category.class)) {
-                @Nullable PluginCategory instance = factory.getCategory(category.name(), false).orElse(null);
+                @Nullable PluginCategory instance = factory.getCategory(category.value(), false).orElse(null);
 
                 if (instance != null) {
                     builder.category(instance);
                     categories.get(builder).add(instance);
                 } else {
-                    builder.category(category.name());
+                    builder.category(category.value());
                 }
             }
 
