@@ -2,6 +2,7 @@ package codes.laivy.plugin.main;
 
 import codes.laivy.plugin.PluginInfo;
 import codes.laivy.plugin.PluginInfo.Builder;
+import codes.laivy.plugin.annotation.Plugin;
 import codes.laivy.plugin.category.AbstractPluginCategory;
 import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.PluginInitializeException;
@@ -82,7 +83,15 @@ final class PluginFactoryImpl implements PluginFactory {
 
     @Override
     public @NotNull PluginInfo retrieve(@NotNull Class<?> reference) {
-        return plugins.values().stream().filter(plugin -> plugin.getReference().equals(reference)).findFirst().orElseThrow(() -> new IllegalArgumentException("the class '" + reference.getName() + "' isn't a plugin"));
+        @Nullable PluginInfo info = plugins.getOrDefault(reference, null);
+
+        if (info != null) {
+            return info;
+        } else if (reference.isAnnotationPresent(Plugin.class)) {
+            throw new IllegalStateException("the plugin '" + reference.getName() + "' isn't initialized yet");
+        } else {
+            throw new IllegalStateException("the reference '" + reference.getName() + "' isn't a plugin");
+        }
     }
     @Override
     public @NotNull PluginInfo retrieve(@NotNull String name) {

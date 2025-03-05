@@ -467,63 +467,38 @@ final class PluginFinderImpl implements PluginFinder {
         @NotNull Map<Class<?>, Builder> builders = new LinkedHashMap<>();
         @NotNull Map<Class<?>, PluginInfo> plugins = new LinkedHashMap<>();
 
-        // Create instances
-        for (@NotNull Class<?> reference : organize(new HashSet<>(Arrays.asList(classes())))) {
-            // Check if predicate validates it
-            if (!predicate.test(reference)) {
-                continue;
-            } else if (factory.plugins.containsKey(reference) && !factory.plugins.get(reference).getState().isIdle()) {
-                continue;
-            }
+        // Iterable
+        @NotNull Iterator<Class<?>> iterator = Arrays.stream(classes()).iterator();
 
-            // Check if it's an inner and non-class
-            if (reference.getEnclosingClass() != null && !Modifier.isStatic(reference.getModifiers())) {
-                throw new InvalidPluginException(reference, "a non-inner class cannot be a plugin, the class should be at least static");
-            }
-
-            // Retrieve plugin loader
-            @NotNull PluginInitializer initializer;
-
+        for (@NotNull Class<?> reference : classes()) {
+            // Verifications
             {
-                // Plugin loader class
-                @NotNull Class<? extends PluginInitializer> loaderClass = ConstructorPluginInitializer.class;
-                if (reference.isAnnotationPresent(Initializer.class)) {
-                    loaderClass = reference.getAnnotation(Initializer.class).type();
+                // Check if predicate validates it
+                if (!predicate.test(reference)) {
+                    continue;
+                } else if (factory.plugins.containsKey(reference) && !factory.plugins.get(reference).getState().isIdle()) {
+                    continue;
                 }
 
-                try {
-                    // Constructor
-                    @NotNull Constructor<? extends PluginInitializer> constructor = loaderClass.getDeclaredConstructor();
-                    constructor.setAccessible(true);
-
-                    initializer = constructor.newInstance();
-                } catch (@NotNull InvocationTargetException e) {
-                    throw new RuntimeException("cannot execute plugin loader's constructor: " + loaderClass, e);
-                } catch (NoSuchMethodException e) {
-                    throw new RuntimeException("cannot find plugin loader's empty declared constructor: " + loaderClass, e);
-                } catch (InstantiationException e) {
-                    throw new RuntimeException("cannot instantiate plugin loader: " + loaderClass, e);
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException("cannot access plugin loader's constructor: " + loaderClass, e);
+                // Check if it's an inner and non-class
+                if (reference.getEnclosingClass() != null && !Modifier.isStatic(reference.getModifiers())) {
+                    throw new InvalidPluginException(reference, "a non-static inner class cannot be a plugin, the class should be at least static");
                 }
             }
+
+            // Retrieve plugin initializer
+            @NotNull PluginInitializer initializer = getInitializer(reference);
 
             // Dependencies
-            @NotNull Set<Class<?>> dependencies = new LinkedHashSet<>();
+            @NotNull Set<Class<?>> dependencies = getDependencies(reference);
 
-            for (@NotNull Dependency annotation : reference.getAnnotationsByType(Dependency.class)) {
-                @NotNull Class<?> dependency = annotation.type();
-
-                // Check issues
-                if (dependency == reference) {
-                    throw new InvalidPluginException(reference, "the plugin cannot have a dependency on itself");
-                }
-
-                // Generate instance
-                if (builders.containsKey(dependency)) {
-                    dependencies.add(dependency);
-                } else {
-                    throw new InvalidPluginException(reference, "there's a dependency that is not a plugin at '" + reference.getName() + "': " + dependency.getName());
+            for (@NotNull Class<?> dependency : dependencies) {
+                if (!builders.containsKey(dependency) && !factory.plugins.containsKey(dependency)) {
+                    if (dependency.isAnnotationPresent(Plugin.class)) {
+                        throw new InvalidPluginException(reference, "the plugin '" + reference.getName() + "' depends on '" + dependency.getName() + "' that isn't loaded.");
+                    } else {
+                        throw new InvalidPluginException(reference, "the plugin '" + reference.getName() + "' cannot have a dependency on '" + dependency.getName() + "' because it's not a plugin");
+                    }
                 }
             }
 
@@ -551,15 +526,15 @@ final class PluginFinderImpl implements PluginFinder {
             categories.put(builder, new LinkedList<>());
 
             // Categories
-            @NotNull Set<String> unregisteredCategories = new LinkedHashSet<>();
-            @NotNull Set<PluginCategory> registeredCategories = new LinkedHashSet<>();
             for (@NotNull Category category : reference.getAnnotationsByType(Category.class)) {
                 @Nullable PluginCategory instance = factory.getCategory(category.value(), false).orElse(null);
 
                 if (instance != null) {
+                    System.out.println("Added: '" + category.value() + "'");
                     builder.category(instance);
                     categories.get(builder).add(instance);
                 } else {
+                    System.out.println("Created: '" + category.value() + "'");
                     builder.category(category.value());
                 }
             }
@@ -757,6 +732,55 @@ final class PluginFinderImpl implements PluginFinder {
         }
 
         return sorted;
+    }
+
+    private static @NotNull PluginInitializer getInitializer(@NotNull Class<?> reference) {
+        // Plugin loader class
+        @NotNull Class<? extends PluginInitializer> loaderClass = ConstructorPluginInitializer.class;
+        if (reference.isAnnotationPresent(Initializer.class)) {
+            loaderClass = reference.getAnnotation(Initializer.class).type();
+        }
+
+        try {
+            // Constructor
+            @NotNull Constructor<? extends PluginInitializer> constructor = loaderClass.getDeclaredConstructor();
+            constructor.setAccessible(true);
+
+            return constructor.newInstance();
+        } catch (@NotNull InvocationTargetException e) {
+            throw new RuntimeException("cannot execute plugin loader's constructor: " + loaderClass, e);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException("cannot find plugin loader's empty declared constructor: " + loaderClass, e);
+        } catch (InstantiationException e) {
+            throw new RuntimeException("cannot instantiate plugin loader: " + loaderClass, e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("cannot access plugin loader's constructor: " + loaderClass, e);
+        }
+    }
+    private static @NotNull Set<Class<?>> getDependencies(@NotNull Class<?> reference) {
+        @NotNull Set<Class<?>> dependencies = new LinkedHashSet<>();
+
+        for (@NotNull Dependency annotation : reference.getAnnotationsByType(Dependency.class)) {
+            // Check issues
+            if (annotation.type() == reference) {
+                throw new InvalidPluginException(reference, "the plugin cannot have a dependency on itself");
+            } else for (@NotNull Dependency a : annotation.type().getAnnotationsByType(Dependency.class)) {
+                @NotNull Class<?> dependency = a.type();
+
+                if (dependency == reference) {
+                    throw new InvalidPluginException(reference, "cyclic dependency between '" + reference.getName() + "' and '" + dependency.getName() + "'.");
+                }
+            }
+
+            // Variables
+            @NotNull Class<?> dependency = annotation.type();
+
+            // Generate instance and register it
+            dependencies.add(dependency);
+        }
+
+        // Finish
+        return dependencies;
     }
 
     // Classes
