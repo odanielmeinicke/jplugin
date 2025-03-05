@@ -336,12 +336,12 @@ final class PluginFinderImpl implements PluginFinder {
         }
 
         @NotNull ClassLoader classLoader = reference.getClassLoader();
-        @NotNull Set<String> categories = Arrays.stream(reference.getAnnotationsByType(Category.class)).map(Category::value).map(String::toLowerCase).collect(Collectors.toSet());
+        @NotNull Set<String> categories = Arrays.stream(reference.getAnnotationsByType(Category.class)).map(Category::name).map(String::toLowerCase).collect(Collectors.toSet());
         @NotNull String packge = reference.getPackage().getName();
-        @NotNull Class<? extends PluginInitializer> initializer = reference.isAnnotationPresent(Initializer.class) ? reference.getAnnotation(Initializer.class).value() : ConstructorPluginInitializer.class;
-        @NotNull String name = reference.getAnnotation(Plugin.class).value();
+        @NotNull Class<? extends PluginInitializer> initializer = reference.isAnnotationPresent(Initializer.class) ? reference.getAnnotation(Initializer.class).type() : ConstructorPluginInitializer.class;
+        @NotNull String name = reference.getAnnotation(Plugin.class).name();
         @NotNull String description = reference.getAnnotation(Plugin.class).description();
-        @NotNull Set<Class<?>> dependencies = Arrays.stream(reference.getAnnotationsByType(Dependency.class)).map(Dependency::value).collect(Collectors.toSet());
+        @NotNull Set<Class<?>> dependencies = Arrays.stream(reference.getAnnotationsByType(Dependency.class)).map(Dependency::type).collect(Collectors.toSet());
 
         if (!classLoaders.isEmpty() && classLoaders.contains(classLoader)) {
             return false;
@@ -488,7 +488,7 @@ final class PluginFinderImpl implements PluginFinder {
                 // Plugin loader class
                 @NotNull Class<? extends PluginInitializer> loaderClass = ConstructorPluginInitializer.class;
                 if (reference.isAnnotationPresent(Initializer.class)) {
-                    loaderClass = reference.getAnnotation(Initializer.class).value();
+                    loaderClass = reference.getAnnotation(Initializer.class).type();
                 }
 
                 try {
@@ -512,7 +512,7 @@ final class PluginFinderImpl implements PluginFinder {
             @NotNull Set<Class<?>> dependencies = new LinkedHashSet<>();
 
             for (@NotNull Dependency annotation : reference.getAnnotationsByType(Dependency.class)) {
-                @NotNull Class<?> dependency = annotation.value();
+                @NotNull Class<?> dependency = annotation.type();
 
                 // Check issues
                 if (dependency == reference) {
@@ -528,7 +528,7 @@ final class PluginFinderImpl implements PluginFinder {
             }
 
             // Name
-            @Nullable String name = reference.getAnnotation(Plugin.class).value();
+            @Nullable String name = reference.getAnnotation(Plugin.class).name();
             if (name.isEmpty()) name = null;
 
             // Description
@@ -554,13 +554,13 @@ final class PluginFinderImpl implements PluginFinder {
             @NotNull Set<String> unregisteredCategories = new LinkedHashSet<>();
             @NotNull Set<PluginCategory> registeredCategories = new LinkedHashSet<>();
             for (@NotNull Category category : reference.getAnnotationsByType(Category.class)) {
-                @Nullable PluginCategory instance = factory.getCategory(category.value(), false).orElse(null);
+                @Nullable PluginCategory instance = factory.getCategory(category.name(), false).orElse(null);
 
                 if (instance != null) {
                     builder.category(instance);
                     categories.get(builder).add(instance);
                 } else {
-                    builder.category(category.value());
+                    builder.category(category.name());
                 }
             }
 
@@ -705,7 +705,7 @@ final class PluginFinderImpl implements PluginFinder {
 
             while (iterator.hasNext()) {
                 @NotNull Class<?> reference = iterator.next();
-                @NotNull Collection<Class<?>> dependencies = Arrays.stream(reference.getAnnotationsByType(Dependency.class)).map(Dependency::value).collect(Collectors.toList());
+                @NotNull Collection<Class<?>> dependencies = Arrays.stream(reference.getAnnotationsByType(Dependency.class)).map(Dependency::type).collect(Collectors.toList());
 
                 if (dependencies.isEmpty() || sorted.containsAll(dependencies)) {
                     sorted.add(reference);

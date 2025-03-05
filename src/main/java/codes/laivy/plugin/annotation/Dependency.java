@@ -36,7 +36,7 @@ public @interface Dependency {
      *
      * @return The dependency class type.
      */
-    @NotNull Class<?> value();
+    @NotNull Class<?> type();
 
     /**
      * A container annotation for multiple {@link Dependency} annotations.

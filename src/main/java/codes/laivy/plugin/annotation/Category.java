@@ -67,7 +67,7 @@ public @interface Category {
      *
      * @return a non-null string representing the category name.
      */
-    @NotNull String value();
+    @NotNull String name();
 
     /**
      * A container annotation that enables multiple {@link Category} annotations to be applied to a single plugin class.
