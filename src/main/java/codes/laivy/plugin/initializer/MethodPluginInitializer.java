@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Objects;
 
 /**
  * A concrete implementation of {@link PluginInitializer} that initializes a plugin by invoking a static
@@ -52,11 +53,15 @@ import java.lang.reflect.Modifier;
 // TODO: 13/02/2025 Add method names
 public final class MethodPluginInitializer implements PluginInitializer {
 
+    // Object
+
     /**
      * Private constructor to prevent instantiation.
      */
     private MethodPluginInitializer() {
     }
+
+    // Modules
 
     /**
      * Creates a {@link PluginInfo} instance for the provided plugin class by instantiating an internal
@@ -78,6 +83,19 @@ public final class MethodPluginInitializer implements PluginInitializer {
                                       @NotNull String @NotNull [] categories) {
         return new BuilderImpl(reference, name, description, dependencies, categories);
     }
+
+    // Implementations
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        return obj instanceof MethodPluginInitializer;
+    }
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(0);
+    }
+
+    // Classes
 
     /**
      * Internal implementation of {@link PluginInfo} for plugins that use a static method-based initialization.

@@ -9,6 +9,8 @@ import codes.laivy.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
 /**
  * A concrete implementation of {@link PluginInitializer} that loads a plugin class
  * without invoking any of its methods or constructors. This is particularly useful
@@ -48,6 +50,17 @@ public final class StaticPluginInitializer implements PluginInitializer {
     @Override
     public @NotNull Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
         return new BuilderImpl(reference, name, description, dependencies, categories);
+    }
+
+    // Implementations
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        return obj instanceof MethodPluginInitializer;
+    }
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(0);
     }
 
     // Classes

@@ -12,6 +12,7 @@ import java.io.Closeable;
 import java.io.Flushable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Objects;
 
 /**
  * A concrete implementation of {@link PluginInitializer} that initializes a plugin by invoking its no-argument
@@ -49,11 +50,15 @@ import java.lang.reflect.InvocationTargetException;
  */
 public final class ConstructorPluginInitializer implements PluginInitializer {
 
+    // Object
+
     /**
      * Private constructor to prevent instantiation of this initializer.
      */
     private ConstructorPluginInitializer() {
     }
+
+    // Modules
 
     /**
      * Creates a {@link PluginInfo} instance for the given plugin class by instantiating an internal
@@ -74,6 +79,19 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                                       @NotNull String @NotNull [] categories) {
         return new BuilderImpl(reference, name, description, dependencies, categories);
     }
+
+    // Implementations
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        return obj instanceof ConstructorPluginInitializer;
+    }
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(0);
+    }
+
+    // Classes
 
     /**
      * Internal implementation of {@link PluginInfo} for plugins that utilize a no-argument constructor for initialization.
