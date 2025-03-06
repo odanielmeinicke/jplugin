@@ -516,20 +516,9 @@ final class PluginFinderImpl implements PluginFinder {
                     builder.category(category);
                     categories.get(builder).add(category);
 
-                    // Category native handler
-                    if (!category.accept(builder)) {
+                    // Category handlers
+                    if (callCategory(builder, category)) {
                         continue main;
-                    }
-
-                    // Handlers
-                    for (@NotNull PluginHandler handler : category.getHandlers()) {
-                        try {
-                            if (!handler.accept(builder)) {
-                                continue main;
-                            }
-                        } catch (@NotNull Throwable throwable) {
-                            throw new RuntimeException("cannot invoke category's handler to accept builder '" + category + "': " + handler);
-                        }
                     }
                 }
             }
@@ -580,20 +569,9 @@ final class PluginFinderImpl implements PluginFinder {
                     builder.category(category);
                     categories.get(builder).add(category);
 
-                    // Category native handler
-                    if (!category.accept(builder)) {
+                    // Category handlers
+                    if (callCategory(builder, category)) {
                         continue main;
-                    }
-
-                    // Handlers
-                    for (@NotNull PluginHandler handler : category.getHandlers()) {
-                        try {
-                            if (!handler.accept(builder)) {
-                                continue main;
-                            }
-                        } catch (@NotNull Throwable throwable) {
-                            throw new RuntimeException("cannot invoke category's handler to accept '" + annotation + "': " + handler);
-                        }
                     }
                 } else {
                     builder.category(annotation.value());
@@ -614,20 +592,9 @@ final class PluginFinderImpl implements PluginFinder {
             {
                 // Category handlers
                 for (@NotNull PluginCategory category : categories.get(builder)) {
-                    // Category native handler
-                    if (!category.accept(plugin)) {
+                    // Category handlers
+                    if (callCategory(plugin, category)) {
                         continue main;
-                    }
-
-                    // Handlers
-                    for (@NotNull PluginHandler handler : category.getHandlers()) {
-                        try {
-                            if (!handler.accept(plugin)) {
-                                continue main;
-                            }
-                        } catch (@NotNull Throwable throwable) {
-                            throw new RuntimeException("cannot invoke category's handler to accept '" + category + "': " + handler);
-                        }
                     }
                 }
 
@@ -814,6 +781,45 @@ final class PluginFinderImpl implements PluginFinder {
 
         // Finish
         return dependencies;
+    }
+
+    private static boolean callCategory(@NotNull Builder builder, @NotNull PluginCategory category) {
+        if (!category.accept(builder)) {
+            return true;
+        }
+
+        // Handlers
+        for (@NotNull PluginHandler handler : category.getHandlers()) {
+            try {
+                if (!handler.accept(builder)) {
+                    return true;
+                }
+            } catch (@NotNull Throwable throwable) {
+                throw new RuntimeException("cannot invoke category's handler to accept '" + category + "': " + handler);
+            }
+        }
+
+        // Finish
+        return false;
+    }
+    private static boolean callCategory(@NotNull PluginInfo plugin, @NotNull PluginCategory category) {
+        if (!category.accept(plugin)) {
+            return true;
+        }
+
+        // Handlers
+        for (@NotNull PluginHandler handler : category.getHandlers()) {
+            try {
+                if (!handler.accept(plugin)) {
+                    return true;
+                }
+            } catch (@NotNull Throwable throwable) {
+                throw new RuntimeException("cannot invoke category's handler to accept '" + category + "': " + handler);
+            }
+        }
+
+        // Finish
+        return false;
     }
 
     // Classes
