@@ -88,9 +88,9 @@ final class PluginFactoryImpl implements PluginFactory {
         if (info != null) {
             return info;
         } else if (reference.isAnnotationPresent(Plugin.class)) {
-            throw new IllegalStateException("the plugin '" + reference.getName() + "' isn't initialized yet");
+            throw new IllegalArgumentException("the plugin '" + reference.getName() + "' isn't initialized yet");
         } else {
-            throw new IllegalStateException("the reference '" + reference.getName() + "' isn't a plugin");
+            throw new IllegalArgumentException("the reference '" + reference.getName() + "' isn't a plugin");
         }
     }
     @Override

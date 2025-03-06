@@ -586,7 +586,13 @@ final class PluginFinderImpl implements PluginFinder {
             }
 
             // Build
-            @NotNull PluginInfo plugin = builder.build();
+            @NotNull PluginInfo plugin;
+
+            try {
+                plugin = builder.build();
+            } catch (@NotNull Throwable e) {
+                throw new PluginInitializeException(reference, "cannot build plugin info of class: " + reference.getName(), e);
+            }
 
             // Call Handlers
             {
