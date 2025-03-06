@@ -466,10 +466,12 @@ final class PluginFinderImpl implements PluginFinder {
         // Variables
         @NotNull Map<Class<?>, Builder> builders = new LinkedHashMap<>();
         @NotNull Map<Class<?>, PluginInfo> plugins = new LinkedHashMap<>();
+        @NotNull Map<Builder, Collection<PluginCategory>> categories = new HashMap<>();
 
-        // Iterable
-        @NotNull Iterator<Class<?>> iterator = Arrays.stream(classes()).iterator();
+        // Create the builder instances
+        // This create the instance without checking for categories and dependencies.
 
+        main:
         for (@NotNull Class<?> reference : classes()) {
             // Verifications
             {
@@ -492,16 +494,6 @@ final class PluginFinderImpl implements PluginFinder {
             // Dependencies
             @NotNull Set<Class<?>> dependencies = getDependencies(reference);
 
-            for (@NotNull Class<?> dependency : dependencies) {
-                if (!builders.containsKey(dependency) && !factory.plugins.containsKey(dependency)) {
-                    if (dependency.isAnnotationPresent(Plugin.class)) {
-                        throw new InvalidPluginException(reference, "the plugin '" + reference.getName() + "' depends on '" + dependency.getName() + "' that isn't loaded.");
-                    } else {
-                        throw new InvalidPluginException(reference, "the plugin '" + reference.getName() + "' cannot have a dependency on '" + dependency.getName() + "' because it's not a plugin");
-                    }
-                }
-            }
-
             // Name
             @Nullable String name = reference.getAnnotation(Plugin.class).name();
             if (name.isEmpty()) name = null;
@@ -513,36 +505,17 @@ final class PluginFinderImpl implements PluginFinder {
             // Create instance
             @NotNull Builder builder = initializer.create(reference, name, description, dependencies.toArray(new Class[0]), new String[0]);
 
-            // Register it
-            builders.put(reference, builder);
-        }
+            // Add to the builder only the categories that actually exists (for now)
+            categories.putIfAbsent(builder, new LinkedList<>());
 
-        // Organize by dependencies order
-        @NotNull Map<Builder, Collection<PluginCategory>> categories = new HashMap<>();
+            for (@NotNull Category annotation : reference.getAnnotationsByType(Category.class)) {
+                @Nullable PluginCategory category = factory.getCategory(annotation.value(), false).orElse(null);
 
-        main:
-        for (@NotNull Builder builder : organize(builders.values())) {
-            @NotNull Class<?> reference = builder.getReference();
-            categories.put(builder, new LinkedList<>());
+                if (category != null) {
+                    // Add category to builder
+                    builder.category(category);
+                    categories.get(builder).add(category);
 
-            // Categories
-            for (@NotNull Category category : reference.getAnnotationsByType(Category.class)) {
-                @Nullable PluginCategory instance = factory.getCategory(category.value(), false).orElse(null);
-
-                if (instance != null) {
-                    System.out.println("Added: '" + category.value() + "'");
-                    builder.category(instance);
-                    categories.get(builder).add(instance);
-                } else {
-                    System.out.println("Created: '" + category.value() + "'");
-                    builder.category(category.value());
-                }
-            }
-
-            // Call Handlers
-            {
-                // Category handlers
-                for (@NotNull PluginCategory category : categories.get(builder)) {
                     // Category native handler
                     if (!category.accept(builder)) {
                         continue main;
@@ -555,18 +528,14 @@ final class PluginFinderImpl implements PluginFinder {
                                 continue main;
                             }
                         } catch (@NotNull Throwable throwable) {
-                            throw new RuntimeException("cannot invoke category's handler to accept '" + category + "': " + handler);
+                            throw new RuntimeException("cannot invoke category's handler to accept builder '" + category + "': " + handler);
                         }
                     }
                 }
-
-                // Global handlers
-                for (@NotNull PluginHandler handler : factory.getGlobalHandlers()) {
-                    if (!handler.accept(builder)) {
-                        continue main;
-                    }
-                }
             }
+
+            // Register it
+            builders.put(reference, builder);
         }
 
         // Shutdown hook
@@ -577,10 +546,66 @@ final class PluginFinderImpl implements PluginFinder {
             Runtime.getRuntime().addShutdownHook(hook);
         }
 
-        // Prepare to initialize
+        // Organize by dependencies order
+        @NotNull Iterator<Builder> iterator = organize(builders.values()).iterator();
+        @NotNull Set<Builder> done = new HashSet<>();
+
         main:
-        for (@NotNull Builder builder : organize(builders.values())) {
+        while (iterator.hasNext()) {
+            // Variables
+            @NotNull Builder builder = iterator.next();
             @NotNull Class<?> reference = builder.getReference();
+            categories.put(builder, new LinkedList<>());
+
+            // Dependencies
+            for (@NotNull Class<?> dependency : builder.getDependencies()) {
+                if (!builders.containsKey(dependency) && !factory.plugins.containsKey(dependency)) {
+                    if (dependency.isAnnotationPresent(Plugin.class)) {
+                        throw new InvalidPluginException(reference, "the plugin '" + reference.getName() + "' depends on '" + dependency.getName() + "' that isn't loaded.");
+                    } else {
+                        throw new InvalidPluginException(reference, "the plugin '" + reference.getName() + "' cannot have a dependency on '" + dependency.getName() + "' because it's not a plugin");
+                    }
+                }
+            }
+
+            // Categories
+            for (@NotNull Category annotation : reference.getAnnotationsByType(Category.class)) {
+                @Nullable PluginCategory category = factory.getCategory(annotation.value(), false).orElse(null);
+
+                if (categories.get(builder).contains(category)) {
+                    continue;
+                }
+
+                if (category != null) {
+                    builder.category(category);
+                    categories.get(builder).add(category);
+
+                    // Category native handler
+                    if (!category.accept(builder)) {
+                        continue main;
+                    }
+
+                    // Handlers
+                    for (@NotNull PluginHandler handler : category.getHandlers()) {
+                        try {
+                            if (!handler.accept(builder)) {
+                                continue main;
+                            }
+                        } catch (@NotNull Throwable throwable) {
+                            throw new RuntimeException("cannot invoke category's handler to accept '" + annotation + "': " + handler);
+                        }
+                    }
+                } else {
+                    builder.category(annotation.value());
+                }
+            }
+
+            // Call global handlers
+            for (@NotNull PluginHandler handler : factory.getGlobalHandlers()) {
+                if (!handler.accept(builder)) {
+                    continue main;
+                }
+            }
 
             // Build
             @NotNull PluginInfo plugin = builder.build();
@@ -629,6 +654,14 @@ final class PluginFinderImpl implements PluginFinder {
             } catch (@NotNull Throwable throwable) {
                 throw new PluginInitializeException(plugin.getReference(), "cannot initialize plugin correctly", throwable);
             }
+
+            // Refresh iterator
+            done.add(builder);
+
+            @NotNull Set<Builder> next = new LinkedHashSet<>(builders.values());
+            next.removeAll(done);
+
+            iterator = organize(next).iterator();
         }
 
         // Add dependencies
