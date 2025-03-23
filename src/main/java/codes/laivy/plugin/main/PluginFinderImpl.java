@@ -11,26 +11,23 @@ import codes.laivy.plugin.category.PluginCategory;
 import codes.laivy.plugin.exception.InvalidPluginException;
 import codes.laivy.plugin.exception.PluginInitializeException;
 import codes.laivy.plugin.exception.PluginInterruptException;
+import codes.laivy.plugin.factory.PluginFactory;
 import codes.laivy.plugin.factory.PluginFinder;
 import codes.laivy.plugin.factory.handlers.PluginHandler;
 import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
 import codes.laivy.plugin.initializer.PluginInitializer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.Opcodes;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.net.URL;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -41,23 +38,37 @@ final class PluginFinderImpl implements PluginFinder {
 
     private final @NotNull PluginFactoryImpl factory;
 
-    private final @NotNull Set<ClassLoader> classLoaders = new HashSet<>();
-    private final @NotNull Set<String> categories = new HashSet<>();
+    final @NotNull Set<ClassLoader> classLoaders = new HashSet<>();
+    final @NotNull Set<String> categories = new HashSet<>();
+    final @NotNull Set<Class<? extends PluginInitializer>> initializers = new HashSet<>();
+    final @NotNull Set<String> names = new HashSet<>();
+    final @NotNull Set<String> descriptions = new HashSet<>();
+    final @NotNull Set<Class<?>> dependencies = new HashSet<>();
+
     private final @NotNull Map<String, Boolean> packages = new HashMap<>();
-    private final @NotNull Set<Class<? extends PluginInitializer>> initializers = new HashSet<>();
-    private final @NotNull Set<String> names = new HashSet<>();
-    private final @NotNull Set<String> descriptions = new HashSet<>();
-
-    private final @NotNull Set<Class<?>> dependencies = new HashSet<>();
     private final @NotNull Set<Class<?>> dependants = new HashSet<>();
-
     private final @NotNull Set<Object> instances = new HashSet<>();
     private final @NotNull Set<State> states = new HashSet<>();
+
+    private final @NotNull Class<?> caller;
 
     private volatile boolean shutdownHook = true;
 
     public PluginFinderImpl(@NotNull PluginFactoryImpl factory) {
         this.factory = factory;
+
+        // Retrieve caller class
+        @NotNull StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+
+        if (stackTrace.length > 3) {
+            try {
+                this.caller = Class.forName(stackTrace[3].getClassName());
+            } catch (@NotNull ClassNotFoundException e) {
+                throw new RuntimeException("cannot retrieve caller class", e);
+            }
+        } else {
+            throw new RuntimeException("invalid stack traces to retrieve caller class");
+        }
     }
 
     // Class Loaders
@@ -377,83 +388,38 @@ final class PluginFinderImpl implements PluginFinder {
         // Finish
         return plugins.toArray(new PluginInfo[0]);
     }
+
     @Override
     public @NotNull Class<?> @NotNull [] classes() throws IOException {
         // Variables
         @NotNull Set<@NotNull Class<?>> references = new HashSet<>();
 
-        // Collect all references
-        Classes.getAllTypeClassesWithVisitor(new BiConsumer<String, InputStream>() {
+        // Consumer
+        @NotNull Consumer<ClassData> consumer = new Consumer<ClassData>() {
             @Override
-            public void accept(@NotNull String name, @NotNull InputStream stream) {
+            public void accept(@NotNull ClassData data) {
+                // Variables
+                @NotNull String name = data.getName();
+                @NotNull ClassLoader classLoader = data.getClassLoader();
+                @NotNull InputStream inputStream = data.getInputStream();
+
+                // Verify package
                 @NotNull String packge = name.contains(".") ? name.substring(0, name.lastIndexOf('.')) : "";
+                if (!checkPackageWithin(packge)) return;
 
-                if (!checkPackageWithin(packge)) {
-                    return;
-                }
-
-                try {
-                    @NotNull Class<?> reference = Class.forName(name, false, ClassLoader.getSystemClassLoader());
-
-                    if (reference.isAnnotationPresent(Plugin.class) && (classLoaders.isEmpty() || classLoaders.contains(reference.getClassLoader()))) {
-                        references.add(reference);
-                    }
-                } catch (@NotNull ClassNotFoundException | @NotNull NoClassDefFoundError e) {
-                    try {
-                        @NotNull AtomicBoolean plugin = new AtomicBoolean(false);
-                        @NotNull AtomicBoolean valid = new AtomicBoolean(true);
-
-                        @NotNull ClassReader reader = new ClassReader(stream);
-                        @NotNull ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9) {
-                            @Override
-                            public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-                                if (valid.get()) {
-                                    return new AnnotationVisitor(Opcodes.ASM9) {
-                                        @Override
-                                        public void visit(String name, Object value) {
-                                            if (descriptor.contains(Plugin.class.getName().replace('.', '/'))) {
-                                                plugin.set(true);
-
-                                                if (!names.isEmpty() && name.equals("name") && !names.contains(value.toString())) {
-                                                    valid.set(false);
-                                                } else if (!descriptions.isEmpty() && name.equals("description") && !descriptions.contains(value.toString())) {
-                                                    valid.set(false);
-                                                }
-                                            } else if (descriptor.contains(Category.class.getName().replace('.', '/'))) {
-                                                if (!categories.isEmpty() && name.equals("name") && categories.stream().noneMatch(category -> category.equalsIgnoreCase(value.toString()))) {
-                                                    valid.set(false);
-                                                }
-                                            } else if (descriptor.contains(Initializer.class.getName().replace('.', '/'))) {
-                                                //noinspection unchecked
-                                                if (!initializers.isEmpty() && name.equals("type") && !initializers.contains((Class<? extends PluginInitializer>) value)) {
-                                                    valid.set(false);
-                                                }
-                                            } else if (descriptor.contains(Dependency.class.getName().replace('.', '/'))) {
-                                                if (!dependencies.isEmpty() && name.equals("type") && !dependencies.contains((Class<?>) value)) {
-                                                    valid.set(false);
-                                                }
-                                            }
-
-                                            super.visit(name, value);
-                                        }
-                                    };
-                                }
-
-                                return super.visitAnnotation(descriptor, visible);
-                            }
-                        };
-
-                        reader.accept(visitor, 0);
-
-                        if (plugin.get() && valid.get()) {
-                            //noinspection deprecation
-                            references.add(Classes.define(reader.b));
-                        }
-                    } catch (@NotNull IOException ignore) {
-                    }
-                }
+                // Load if it's a plugin
+                @Nullable Class<?> reference = data.loadIfPlugin(PluginFinderImpl.this);
+                if (reference != null) references.add(reference);
             }
-        });
+        };
+
+        // Collect all references
+        if (classLoaders.isEmpty()) {
+            @NotNull URL url = caller.getProtectionDomain().getCodeSource().getLocation();
+            Classes.getAllTypeClassesWithVisitor(url, caller.getClassLoader(), consumer);
+        } else {
+            Classes.getAllTypeClassesWithVisitor(classLoaders, consumer);
+        }
 
         // Load references
         return references.toArray(new Class[0]);
@@ -646,6 +612,12 @@ final class PluginFinderImpl implements PluginFinder {
         // Finish
         return plugins.values().toArray(new PluginInfo[0]);
     }
+
+    @Override
+    public @NotNull PluginFactory getFactory() {
+        return factory;
+    }
+
 
     // Utilities
 
