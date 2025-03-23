@@ -352,4 +352,14 @@ public interface PluginFinder {
      * @throws IOException               If an I/O error occurs during plugin discovery or loading.
      */
     @NotNull PluginInfo @NotNull [] load(@NotNull Predicate<Class<?>> predicate) throws PluginInitializeException, IOException;
+
+    /**
+     * Gets the plugin factory of this plugin finder instance. All the plugin finders must
+     * have a plugin factory to specify exactly the factory the plugins will be loaded.
+     *
+     * @return The plugin factory of this plugin finder instance
+     * @since 1.1.5
+     */
+    @NotNull PluginFactory getFactory();
+
 }
