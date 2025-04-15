@@ -386,7 +386,7 @@ final class PluginFinderImpl implements PluginFinder {
         }
 
         // Finish
-        return plugins.toArray(new PluginInfo[0]);
+        return organizePlugins(plugins).toArray(new PluginInfo[0]);
     }
 
     // todo: this finds the inner classes plugins also?
@@ -660,6 +660,21 @@ final class PluginFinderImpl implements PluginFinder {
         return any;
     }
 
+    private static @NotNull Set<PluginInfo> organizePlugins(@NotNull Set<PluginInfo> plugins) {
+        @NotNull Map<Class<?>, PluginInfo> map = plugins.stream().collect(Collectors.toMap(PluginInfo::getReference, Function.identity()));
+        @NotNull Set<Class<?>> sortedReferences = organize(map.keySet());
+
+        @NotNull Set<PluginInfo> sorted = new LinkedHashSet<>();
+        for (@NotNull Class<?> reference : sortedReferences) {
+            PluginInfo info = map.get(reference);
+            if (info == null) {
+                throw new IllegalStateException("Missing PluginInfo for reference: " + reference);
+            }
+            sorted.add(info);
+        }
+
+        return sorted;
+    }
     private static @NotNull Set<Class<?>> organize(@NotNull Set<Class<?>> references) {
         @NotNull Set<Class<?>> sorted = new LinkedHashSet<>();
         @NotNull List<Class<?>> remaining = new ArrayList<>(references);
