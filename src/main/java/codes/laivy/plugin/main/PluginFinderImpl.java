@@ -389,6 +389,7 @@ final class PluginFinderImpl implements PluginFinder {
         return plugins.toArray(new PluginInfo[0]);
     }
 
+    // todo: this finds the inner classes plugins also?
     @Override
     public @NotNull Class<?> @NotNull [] classes() throws IOException {
         // Variables
@@ -504,6 +505,7 @@ final class PluginFinderImpl implements PluginFinder {
         // Organize by dependencies order
         @NotNull Iterator<Builder> iterator = organize(builders.values()).iterator();
         @NotNull Set<Builder> done = new HashSet<>();
+        @NotNull Set<Builder> refreshed = new HashSet<>();
 
         main:
         while (iterator.hasNext()) {
@@ -523,32 +525,43 @@ final class PluginFinderImpl implements PluginFinder {
                 }
             }
 
-            // Categories
-            for (@NotNull Category annotation : reference.getAnnotationsByType(Category.class)) {
-                @Nullable PluginCategory category = factory.getCategory(annotation.value(), false).orElse(null);
+            if (!refreshed.contains(builder)) {
+                // Categories
+                for (@NotNull Category annotation : reference.getAnnotationsByType(Category.class)) {
+                    @Nullable PluginCategory category = factory.getCategory(annotation.value(), false).orElse(null);
 
-                if (categories.get(builder).contains(category)) {
-                    continue;
+                    if (categories.get(builder).contains(category)) {
+                        continue;
+                    }
+
+                    if (category != null) {
+                        builder.category(category);
+                        categories.get(builder).add(category);
+
+                        // Category handlers
+                        if (callCategory(builder, category)) {
+                            continue main;
+                        }
+                    } else {
+                        builder.category(annotation.value());
+                    }
                 }
 
-                if (category != null) {
-                    builder.category(category);
-                    categories.get(builder).add(category);
-
-                    // Category handlers
-                    if (callCategory(builder, category)) {
+                // Call global handlers
+                for (@NotNull PluginHandler handler : factory.getGlobalHandlers()) {
+                    if (!handler.accept(builder)) {
                         continue main;
                     }
-                } else {
-                    builder.category(annotation.value());
                 }
-            }
 
-            // Call global handlers
-            for (@NotNull PluginHandler handler : factory.getGlobalHandlers()) {
-                if (!handler.accept(builder)) {
-                    continue main;
-                }
+                refreshed.add(builder);
+
+                @NotNull Set<Builder> next = new LinkedHashSet<>(builders.values());
+                next.removeAll(done);
+
+                iterator = organize(next).iterator();
+
+                continue;
             }
 
             // Build
@@ -701,7 +714,6 @@ final class PluginFinderImpl implements PluginFinder {
                 throw new IllegalStateException("cyclic or unresolved dependencies detected: " + remaining);
             }
 
-            // Ordena os builders elegíveis pela prioridade (prioridade menor vem primeiro)
             eligible.sort(Comparator.comparingInt(Builder::getPriority));
 
             @NotNull Builder chosen = eligible.get(0);

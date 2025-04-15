@@ -146,6 +146,13 @@ abstract class AbstractPluginBuilder implements Builder {
         return this;
     }
 
+    // Implementations
+
+    @Override
+    public @NotNull String toString() {
+        return getReference().getName();
+    }
+
     // Classes
 
     private final class DefaultComparable implements Comparable<Builder> {

@@ -57,6 +57,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Repeatable(value = Category.Categories.class)
+// todo: @Global annotation that allows plugins to be loaded by another class loaders and/or packages
 public @interface Category {
 
     /**
