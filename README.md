@@ -120,7 +120,7 @@ The @Initializer annotation specifies the implementation responsible for initial
 Usage
 
 ```java
-import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
+import dev.meinicke.plugin.initializer.ConstructorPluginInitializer;
 
 import java.io.Closeable;
 
@@ -148,8 +148,8 @@ The `@Dependency` annotation declares a required dependency for a plugin class. 
 Usage
 
 ```java
-import codes.laivy.plugin.annotation.Initializer;
-import codes.laivy.plugin.initializer.MethodPluginInitializer;
+import dev.meinicke.plugin.annotation.Initializer;
+import dev.meinicke.plugin.initializer.MethodPluginInitializer;
 
 @Dependency(type = SomeLibrary.class) // It can have multiples dependencies!
 @Initializer(type = MethodPluginInitializer.class)
@@ -186,9 +186,9 @@ public class UtilityPlugin {
 ```
 
 ```java
-import codes.laivy.plugin.factory.handlers.PluginHandler;
-import codes.laivy.plugin.PluginInfo;
-import codes.laivy.plugin.main.Plugins;
+import dev.meinicke.plugin.factory.handlers.PluginHandler;
+import dev.meinicke.plugin.PluginInfo;
+import dev.meinicke.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 
 public static void main(String[] args) {
@@ -260,7 +260,7 @@ When you create a class with the `@Plugin` annotation, if you simply execute you
 This is the most recommended way to load plugins, because it's faster.
 
 ```java
-import codes.laivy.plugin.main.Plugins;
+import dev.meinicke.plugin.main.Plugins;
 
 public static void main(String[] args) {
    // Plugins.initialize("com.project.plugins", false); // Will load all the plugins inside the package 'com.project.plugins'
@@ -272,12 +272,12 @@ public static void main(String[] args) {
 This is not the faster way to load plugins, but is the most precise one. You can control a lot of parameters to load plugins here.
 
 ```java
-import codes.laivy.plugin.factory.PluginFinder;
-import codes.laivy.plugin.main.Plugins;
+import dev.meinicke.plugin.factory.PluginFinder;
+import dev.meinicke.plugin.main.Plugins;
 
 public static void main(String[] args) {
    PluginFinder finder = Plugins.find();
-   finder.addPackage("codes.laivy"); // Will load all plug-ins into this package (recursively by default)
+   finder.addPackage("dev.meinicke"); // Will load all plug-ins into this package (recursively by default)
    finder.addClassLoader(Main.class.getClassLoader()); // Using a specific class loader
    finder.categories("HTTP Page"); // Only plug-ins with a specific category
    
@@ -331,8 +331,8 @@ Organizing plug-ins into categories can help in managing them effectively. Hereâ
 ```java
 package my.website.pages;
 
-import codes.laivy.plugin.annotation.Initializer;
-import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
+import dev.meinicke.plugin.annotation.Initializer;
+import dev.meinicke.plugin.initializer.ConstructorPluginInitializer;
 
 /**
  * This is a plug-in that represents an HTTP page at an website environment
@@ -359,10 +359,10 @@ final class Authentication extends Page {
 ```
 
 ```java
-import codes.laivy.plugin.factory.handlers.PluginHandler;
-import codes.laivy.plugin.exception.PluginInitializeException;
-import codes.laivy.plugin.PluginInfo;
-import codes.laivy.plugin.main.Plugins;
+import dev.meinicke.plugin.factory.handlers.PluginHandler;
+import dev.meinicke.plugin.exception.PluginInitializeException;
+import dev.meinicke.plugin.PluginInfo;
+import dev.meinicke.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 
 public static void main(String[] args) {
@@ -420,8 +420,8 @@ The plug-in has advanced features that allows developers enhance the power of th
 You can define custom initialization logic for your plug-in using an initializer, allowing for more complex setup procedures.
 
 ```java
-import codes.laivy.plugin.PluginInfo;
-import codes.laivy.plugin.category.PluginCategory;
+import dev.meinicke.plugin.PluginInfo;
+import dev.meinicke.plugin.category.PluginCategory;
 
 public final class MyPluginInitializer extends PluginInitializer {
 
