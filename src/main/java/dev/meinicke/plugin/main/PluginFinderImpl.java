@@ -1,21 +1,21 @@
-package codes.laivy.plugin.main;
+package dev.meinicke.plugin.main;
 
-import codes.laivy.plugin.PluginInfo;
-import codes.laivy.plugin.PluginInfo.Builder;
-import codes.laivy.plugin.PluginInfo.State;
-import codes.laivy.plugin.annotation.Category;
-import codes.laivy.plugin.annotation.Dependency;
-import codes.laivy.plugin.annotation.Initializer;
-import codes.laivy.plugin.annotation.Plugin;
-import codes.laivy.plugin.category.PluginCategory;
-import codes.laivy.plugin.exception.InvalidPluginException;
-import codes.laivy.plugin.exception.PluginInitializeException;
-import codes.laivy.plugin.exception.PluginInterruptException;
-import codes.laivy.plugin.factory.PluginFactory;
-import codes.laivy.plugin.factory.PluginFinder;
-import codes.laivy.plugin.factory.handlers.PluginHandler;
-import codes.laivy.plugin.initializer.ConstructorPluginInitializer;
-import codes.laivy.plugin.initializer.PluginInitializer;
+import dev.meinicke.plugin.PluginInfo;
+import dev.meinicke.plugin.PluginInfo.Builder;
+import dev.meinicke.plugin.PluginInfo.State;
+import dev.meinicke.plugin.annotation.Category;
+import dev.meinicke.plugin.annotation.Dependency;
+import dev.meinicke.plugin.annotation.Initializer;
+import dev.meinicke.plugin.annotation.Plugin;
+import dev.meinicke.plugin.category.PluginCategory;
+import dev.meinicke.plugin.exception.InvalidPluginException;
+import dev.meinicke.plugin.exception.PluginInitializeException;
+import dev.meinicke.plugin.exception.PluginInterruptException;
+import dev.meinicke.plugin.factory.PluginFactory;
+import dev.meinicke.plugin.factory.PluginFinder;
+import dev.meinicke.plugin.factory.handlers.PluginHandler;
+import dev.meinicke.plugin.initializer.ConstructorPluginInitializer;
+import dev.meinicke.plugin.initializer.PluginInitializer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -59,15 +59,37 @@ final class PluginFinderImpl implements PluginFinder {
 
         // Retrieve caller class
         @NotNull StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        @Nullable Class<?> caller = null;
 
-        if (stackTrace.length > 3) {
-            try {
-                this.caller = Class.forName(stackTrace[3].getClassName());
-            } catch (@NotNull ClassNotFoundException e) {
-                throw new RuntimeException("cannot retrieve caller class", e);
+        if (stackTrace.length > 1) {
+            int index = 0;
+            for (@NotNull StackTraceElement element : stackTrace) {
+                index++;
+                if (index == 1) continue; // Skip first
+
+                // Skip jplugin classes
+                if (element.getClassName().startsWith("dev.meinicke.plugin")) {
+                    continue;
+                }
+
+                // Select first
+                try {
+                    caller = Class.forName(element.getClassName());
+                } catch (@NotNull ClassNotFoundException e) {
+                    throw new RuntimeException("cannot retrieve caller class", e);
+                }
+
+                break;
             }
         } else {
             throw new RuntimeException("invalid stack traces to retrieve caller class");
+        }
+
+        // Finish
+        if (caller == null) {
+            throw new IllegalStateException("cannot retrieve caller class");
+        } else {
+            this.caller = caller;
         }
     }
 
@@ -493,6 +515,8 @@ final class PluginFinderImpl implements PluginFinder {
             // Register it
             builders.put(reference, builder);
         }
+
+        System.out.println("Caller: " + caller.getName());
 
         // Shutdown hook
         @NotNull Set<PluginInfo> loadedPlugins = new LinkedHashSet<>();
