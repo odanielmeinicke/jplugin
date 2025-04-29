@@ -1,7 +1,6 @@
 package dev.meinicke.plugin.annotation;
 
 import dev.meinicke.plugin.initializer.PluginInitializer;
-import dev.meinicke.plugin.initializer.PluginInitializer;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.ElementType;

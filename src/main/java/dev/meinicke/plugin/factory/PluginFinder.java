@@ -4,8 +4,6 @@ import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.category.PluginCategory;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.initializer.PluginInitializer;
-import dev.meinicke.plugin.PluginInfo;
-import dev.meinicke.plugin.initializer.PluginInitializer;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 

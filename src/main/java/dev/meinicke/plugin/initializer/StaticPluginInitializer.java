@@ -1,12 +1,9 @@
 package dev.meinicke.plugin.initializer;
 
 import dev.meinicke.plugin.PluginInfo;
-import dev.meinicke.plugin.PluginInfo.Builder;
 import dev.meinicke.plugin.category.PluginCategory;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.exception.PluginInterruptException;
-import dev.meinicke.plugin.main.Plugins;
-import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

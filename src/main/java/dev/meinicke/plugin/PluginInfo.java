@@ -9,7 +9,6 @@ import dev.meinicke.plugin.factory.handlers.Handlers;
 import dev.meinicke.plugin.factory.handlers.PluginHandler;
 import dev.meinicke.plugin.initializer.PluginInitializer;
 import dev.meinicke.plugin.main.Plugins;
-import dev.meinicke.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

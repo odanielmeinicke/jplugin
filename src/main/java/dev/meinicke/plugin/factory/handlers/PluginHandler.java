@@ -3,9 +3,6 @@ package dev.meinicke.plugin.factory.handlers;
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.exception.PluginInterruptException;
-import dev.meinicke.plugin.PluginInfo;
-import dev.meinicke.plugin.exception.PluginInitializeException;
-import dev.meinicke.plugin.exception.PluginInterruptException;
 import org.jetbrains.annotations.NotNull;
 
 /**

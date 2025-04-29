@@ -3,9 +3,6 @@ package dev.meinicke.plugin.category;
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.factory.handlers.Handlers;
 import dev.meinicke.plugin.main.Plugins;
-import dev.meinicke.plugin.PluginInfo;
-import dev.meinicke.plugin.factory.handlers.Handlers;
-import dev.meinicke.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

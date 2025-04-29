@@ -2,7 +2,6 @@ package dev.meinicke.plugin.initializer;
 
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.exception.InvalidPluginException;
-import dev.meinicke.plugin.PluginInfo;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

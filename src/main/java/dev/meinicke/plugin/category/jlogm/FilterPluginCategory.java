@@ -1,15 +1,12 @@
 package dev.meinicke.plugin.category.jlogm;
 
-import dev.meinicke.plugin.PluginInfo;
-import dev.meinicke.plugin.category.AbstractPluginCategory;
 import com.jlogm.Filter;
 import com.jlogm.Logger;
 import com.jlogm.factory.LoggerFactory;
 import dev.meinicke.plugin.PluginInfo;
+import dev.meinicke.plugin.category.AbstractPluginCategory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import static dev.meinicke.plugin.PluginInfo.Builder;
 
 final class FilterPluginCategory extends AbstractPluginCategory {
 

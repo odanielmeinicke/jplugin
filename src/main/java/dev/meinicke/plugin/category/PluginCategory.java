@@ -3,8 +3,6 @@ package dev.meinicke.plugin.category;
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.factory.handlers.Handlers;
 import dev.meinicke.plugin.factory.handlers.PluginHandler;
-import dev.meinicke.plugin.PluginInfo;
-import dev.meinicke.plugin.factory.handlers.Handlers;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;

@@ -70,6 +70,8 @@ public @interface Category {
      */
     @NotNull String value();
 
+    // Classes
+
     /**
      * A container annotation that enables multiple {@link Category} annotations to be applied to a single plugin class.
      * <p>
@@ -91,4 +93,5 @@ public @interface Category {
          */
         @NotNull Category @NotNull [] value();
     }
+
 }
