@@ -60,8 +60,8 @@ jplugin/
 ├── src/
 │   ├── main/
 │   │   ├── java/
-│   │   │   └── codes/
-│   │   │       └── laivy/
+│   │   │   └── dev/
+│   │   │       └── meinicke/
 │   │   │           └── plugin/
 │   │   │               ├── annotation/
 │   │   │               ├── category/
@@ -74,8 +74,8 @@ jplugin/
 │   │   └── resources/
 │   └── test/
 │       └── java/
-│           └── codes/
-│               └── laivy/
+│           └── dev/
+│               └── meinicke/
 │                   └── plugin/
 └── pom.xml
 ```

@@ -6,12 +6,12 @@
 
     <groupId>dev.meinicke</groupId>
     <artifactId>jplugin</artifactId>
-    <version>1.1.5</version>
+    <version>1.1.6</version>
     <packaging>jar</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>A plugins framework to easily "load" and control classes at your application</description>
-    <url>https://github.com/ItsLaivy/jplugin</url>
+    <url>https://github.com/odanielmeinicke/jplugin</url>
 
     <licenses>
         <license>
@@ -30,9 +30,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/itslaivy/jplugin.git</connection>
-        <developerConnection>scm:git:ssh://github.com:itslaivy/jplugin.git</developerConnection>
-        <url>http://github.com/itslaivy/jplugin/tree/master</url>
+        <connection>scm:git:git://github.com/odanielmeinicke/jplugin.git</connection>
+        <developerConnection>scm:git:ssh://github.com:odanielmeinicke/jplugin.git</developerConnection>
+        <url>http://github.com/odanielmeinicke/jplugin/tree/master</url>
     </scm>
 
     <properties>
