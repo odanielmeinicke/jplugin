@@ -8,6 +8,7 @@ import dev.meinicke.plugin.annotation.Dependency;
 import dev.meinicke.plugin.annotation.Initializer;
 import dev.meinicke.plugin.annotation.Plugin;
 import dev.meinicke.plugin.category.PluginCategory;
+import dev.meinicke.plugin.context.PluginContext;
 import dev.meinicke.plugin.exception.InvalidPluginException;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.exception.PluginInterruptException;
@@ -492,7 +493,8 @@ final class PluginFinderImpl implements PluginFinder {
             if (description.isEmpty()) description = null;
 
             // Create instance
-            @NotNull Builder builder = initializer.create(reference, name, description, dependencies.toArray(new Class[0]), new String[0]);
+            @NotNull PluginContext context = new PluginContextImpl(reference, caller, this);
+            @NotNull Builder builder = initializer.create(reference, name, description, dependencies.toArray(new Class[0]), new String[0], context);
 
             // Add to the builder only the categories that actually exists (for now)
             categories.putIfAbsent(builder, new LinkedList<>());
@@ -515,8 +517,6 @@ final class PluginFinderImpl implements PluginFinder {
             // Register it
             builders.put(reference, builder);
         }
-
-        System.out.println("Caller: " + caller.getName());
 
         // Shutdown hook
         @NotNull Set<PluginInfo> loadedPlugins = new LinkedHashSet<>();
@@ -619,6 +619,28 @@ final class PluginFinderImpl implements PluginFinder {
             factory.plugins.put(reference, plugin);
             plugins.put(reference, plugin);
 
+            // Refresh iterator
+            done.add(builder);
+
+            @NotNull Set<Builder> next = new LinkedHashSet<>(builders.values());
+            next.removeAll(done);
+
+            iterator = organize(next).iterator();
+        }
+
+        // Update contexts
+        for (@NotNull Class<?> reference : plugins.keySet()) {
+            @NotNull Builder builder = builders.get(reference);
+            @NotNull PluginInfo plugin = plugins.get(reference);
+
+            // Change context variables
+            @NotNull PluginContextImpl context = (PluginContextImpl) builder.getContext();
+            context.plugin = plugin;
+            context.plugins.addAll(plugins.values());
+        }
+
+        // Start plugins
+        for (@NotNull PluginInfo plugin : plugins.values()) {
             try {
                 plugin.start();
 
@@ -630,14 +652,6 @@ final class PluginFinderImpl implements PluginFinder {
             } catch (@NotNull Throwable throwable) {
                 throw new PluginInitializeException(plugin.getReference(), "cannot initialize plugin correctly", throwable);
             }
-
-            // Refresh iterator
-            done.add(builder);
-
-            @NotNull Set<Builder> next = new LinkedHashSet<>(builders.values());
-            next.removeAll(done);
-
-            iterator = organize(next).iterator();
         }
 
         // Add dependencies

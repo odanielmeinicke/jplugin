@@ -1,7 +1,6 @@
 package dev.meinicke.plugin.main;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,7 +11,6 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.jar.JarEntry;
@@ -115,19 +113,6 @@ final class Classes {
 
                 try (@NotNull InputStream stream = jar.getInputStream(entry)) {
                     consumer.accept(new ClassData(name, loader, stream));
-                }
-            }
-        }
-    }
-    private static void listFiles(@NotNull File directory, @NotNull Map<@NotNull String, @NotNull URL> map) throws IOException {
-        @NotNull File @Nullable [] files = directory.listFiles();
-
-        if (files != null) {
-            for (@NotNull File file : files) {
-                if (file.isDirectory()) {
-                    listFiles(file, map);
-                } else if (file.getName().endsWith(".class")) {
-                    map.put(file.getPath(), file.toURI().toURL());
                 }
             }
         }

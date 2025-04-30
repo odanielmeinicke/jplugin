@@ -19,29 +19,6 @@ import java.util.function.Consumer;
  * through the {@link Consumer#accept(Object)} method, which may throw a runtime exception
  * (such as {@link IllegalArgumentException}) if the provided value does not meet the constraints.
  *
- * <p>
- * Example use case:
- * <pre>{@code
- * MetadataType<Integer> timeoutType = new MetadataType<>() {
- *     @Override
- *     public Class<Integer> getReference() {
- *         return Integer.class;
- *     }
- *
- *     @Override
- *     public boolean isRequired() {
- *         return true;
- *     }
- *
- *     @Override
- *     public void accept(Integer value) {
- *         if (value == null || value < 1 || value > 60000) {
- *             throw new IllegalArgumentException("Timeout must be between 1 and 60000 ms.");
- *         }
- *     }
- * };
- * }</pre>
- *
  * @param <T> the expected Java type of the metadata value
  */
 public interface MetadataType<T> extends Consumer<@Nullable T> {

@@ -125,122 +125,41 @@ public class Attributes implements Iterable<AttributeHolder> {
      * @return {@code true} if the attribute was successfully added, {@code false} otherwise
      */
     public boolean put(@NotNull String key, @NotNull String value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, @NotNull String[] value) { return add(new AttributeHolderImpl(key, value)); }
 
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, @NotNull Class<?> value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, @NotNull Class<?>[] value) { return add(new AttributeHolderImpl(key, value)); }
 
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, int value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, int @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, @NotNull Integer @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
 
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, long value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, long @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, @NotNull Long @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
 
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, double value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, double @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, @NotNull Double @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
 
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, float value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, float @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, @NotNull Float @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
 
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, boolean value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, boolean @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, @NotNull Boolean @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
 
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, byte value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, byte @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, @NotNull Byte @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
 
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, short value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, short @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, @NotNull Short @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
 
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, char value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, char @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
-    /**
-     * @see #put(String, String)
-     */
     public boolean put(@NotNull String key, @NotNull Character @NotNull [] value) { return add(new AttributeHolderImpl(key, value)); }
 
     /**

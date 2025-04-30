@@ -3,9 +3,11 @@ package dev.meinicke.plugin.context;
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.attribute.Attributes;
 import dev.meinicke.plugin.factory.PluginFinder;
+import dev.meinicke.plugin.initializer.PluginInitializer;
 import dev.meinicke.plugin.metadata.Metadata;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.Collection;
 
@@ -42,6 +44,31 @@ import java.util.Collection;
 public interface PluginContext {
 
     /**
+     * Returns the raw {@link Class} object representing the plugin’s entry point.
+     * <p>
+     * This is the concrete class annotated with {@code @Plugin} that is being processed
+     * or initialized in the current context. It serves as the fundamental anchor for reflection,
+     * metadata extraction, lifecycle orchestration, and dependency injection.
+     * </p>
+     *
+     * <h1>Typical Use Cases:</h1>
+     * <ul>
+     *   <li>Locating fields, methods, or annotations declared on the plugin class.</li>
+     *   <li>Creating reflective instances for method-based initialization (e.g., calling {@code #initialize}).</li>
+     *   <li>Validating the presence of structural or semantic markers expected by the framework or initializer.</li>
+     *   <li>Binding the plugin class to a dependency injection container or service registry.</li>
+     * </ul>
+     *
+     * <p>
+     * Note that this class is guaranteed to be the same one provided to the {@link PluginInitializer#create}
+     * method and is not yet instantiated unless the initializer explicitly does so.
+     * </p>
+     *
+     * @return the class object representing the plugin’s main class; never {@code null}
+     */
+    @NotNull Class<?> getPluginClass();
+
+    /**
      * Returns the {@link PluginInfo} descriptor for the plugin currently being initialized
      * or executed.
      * <p>
@@ -65,6 +92,7 @@ public interface PluginContext {
      *
      * @return an immutable collection of all loaded plugins; never {@code null}
      */
+    @Unmodifiable
     @NotNull Collection<PluginInfo> getAllPlugins();
 
     /**
