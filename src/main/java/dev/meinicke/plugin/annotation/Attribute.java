@@ -1,48 +1,89 @@
 package dev.meinicke.plugin.annotation;
 
+import dev.meinicke.plugin.attribute.AttributeHolder;
 import dev.meinicke.plugin.exception.IllegalAttributeTypeException;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.lang.annotation.*;
 
-import static dev.meinicke.plugin.annotation.Attribute.Attributes;
-
 /**
- * Declares a single metadata entry for a plugin, as defined by the {@code @Attribute} annotation.
+ * Declares a compile-time attribute to be associated with a plugin class.
  * <p>
- * Each usage of {@code @Attribute} must supply exactly one non-default value element (stringValue, stringArray,
- * classValue, classArray, intValue, intArray, etc.). Supplying more than one or none will result in undefined
- * behavior at runtime when processed by the plugin framework.
+ * This annotation is used to define metadata that can be read during plugin discovery or initialization,
+ * and automatically injected into the plugin's {@link AttributeHolder}. Each attribute defines a key,
+ * a type (to validate correctness), and one value (either a scalar or an array).
  * </p>
  *
- * <h3>Key Characteristics:</h3>
+ * <h3>Key Features:</h3>
  * <ul>
- *   <li><strong>Key:</strong> A mandatory, case-insensitive identifier for this attribute.</li>
- *   <li><strong>Single Value Constraint:</strong> Exactly one of the value elements must be explicitly set to a
- *       non-default value. All other value elements must remain at their default.</li>
- *   <li><strong>Type Safety:</strong> At runtime, the framework will convert the declared value to the corresponding
- *       Java type and throw an {@link IllegalAttributeTypeException} if a mismatch occurs.</li>
- *   <li><strong>Repeatable:</strong> Multiple {@code @Attribute} annotations may be applied to the same element
- *       if the annotation type is marked {@code @Repeatable}; the framework will aggregate them.</li>
+ *   <li>Supports primitive types, strings, class references, and their array counterparts.</li>
+ *   <li>All keys are case-insensitive and must be unique per plugin class.</li>
+ *   <li>Allows multiple attributes on the same class via {@link Attributes} (repeating container).</li>
+ *   <li>Performs runtime type validation using the {@link #type()} element.</li>
  * </ul>
  *
+ * <h3>Type Validation:</h3>
+ * <p>
+ * The {@link #type()} element defines the expected type that will be used by the
+ * {@link AttributeHolder} for value injection. This type must match the actual kind of value
+ * defined (e.g. {@code String.class}, {@code int[].class}, {@code MyEnum.class}).
+ * If a mismatch is detected, an {@code IllegalAttributeTypeException} is thrown at runtime.
+ * </p>
+ *
+ * <h3>Usage Constraints:</h3>
+ * <ul>
+ *   <li>Exactly one of the value elements must be non-default (e.g. {@code string()}, {@code integer()}, etc.).</li>
+ *   <li>All unused elements must remain at their default values.</li>
+ *   <li>The {@code type()} must correspond to a valid getter method in {@link AttributeHolder}.</li>
+ *   <li>Array types are supported (e.g. {@code String[].class}, {@code int[].class}, etc.).</li>
+ * </ul>
+ *
+ * <h3>Example:</h3>
+ * <pre>{@code
+ * \@Attribute(
+ *     key = "max-connections",
+ *     type = int.class,
+ *     integer = 100
+ * )
+ * \@Attribute(
+ *     key = "supported-modes",
+ *     type = String[].class,
+ *     stringArray = {"READ", "WRITE"}
+ * )
+ * public final class MyPlugin { ... }
+ * }</pre>
+ *
+ * @see AttributeHolder
+ * @see Attributes
  * @see IllegalAttributeTypeException
- * @author Daniel Meinicke
- * @since 1.1.6
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Repeatable(Attributes.class)
+@Repeatable(Attribute.Attributes.class)
 public @interface Attribute {
 
     /**
-     * The unique, case-insensitive key for this attribute entry.
-     * Plugins and the plugin runtime use this key to look up and retrieve the associated value.
+     * The unique, case-insensitive key that identifies this attribute.
+     * <p>
+     * This key is used for lookup in {@link AttributeHolder} and must be unique per plugin.
      *
-     * @return the attribute key, never {@code null} or empty.
+     * @return the key name; never {@code null} or empty
      */
     @NotNull String key();
+
+    /**
+     * Declares the expected Java type for this attribute’s value.
+     * <p>
+     * The framework will validate this type against the declared value (e.g., {@code string()}, {@code integer()})
+     * and ensure it maps to a supported method in {@link AttributeHolder}.
+     * </p>
+     * <p>
+     * If the provided value does not match the declared type, an {@link IllegalAttributeTypeException} will be thrown.
+     * </p>
+     *
+     * @return the value type; must not be {@code void.class}
+     */
+    @NotNull Class<?> type();
 
     // --- String Types ---
 
@@ -55,7 +96,7 @@ public @interface Attribute {
      *
      * @return the string value, or empty if unused.
      */
-    @NotNull String stringValue() default "";
+    @NotNull String string() default "";
 
     /**
      * An array of {@code String} values for this attribute.
@@ -66,7 +107,7 @@ public @interface Attribute {
      *
      * @return the string array, or empty if unused.
      */
-    @NotNull String @Nullable [] stringArray() default {};
+    @NotNull String @NotNull [] stringArray() default {};
 
     // --- Class Types ---
 
@@ -89,7 +130,7 @@ public @interface Attribute {
      *
      * @return the class array, or empty if unused.
      */
-    @NotNull Class<?> @Nullable [] classArray() default {};
+    @NotNull Class<?> @NotNull [] classArray() default {};
 
     // --- Primitive Single Values ---
 
@@ -101,7 +142,7 @@ public @interface Attribute {
      *
      * @return the int value, or {@code 0} if unused.
      */
-    int intValue() default 0;
+    int integer() default 0;
 
     /**
      * A {@code long} value for this attribute.
@@ -162,7 +203,7 @@ public @interface Attribute {
      *
      * @return the char value, or {@code '\0'} if unused.
      */
-    char charValue() default '\0';
+    char character() default '\0';
 
     // --- Primitive Array Values ---
 
@@ -171,7 +212,7 @@ public @interface Attribute {
      *
      * @return an int array, or empty if unused.
      */
-    int[] intArray() default {};
+    int[] integerArray() default {};
 
     /**
      * An array of {@code long} values for this attribute.
@@ -228,7 +269,7 @@ public @interface Attribute {
      * Container annotation for repeating {@link Attribute} annotations.
      * <p>
      * This annotation enables multiple {@code @Attribute} declarations to be applied to the same element,
-     * in accordance with the {@link java.lang.annotation.Repeatable} contract.
+     * in accordance with the {@link Repeatable} contract.
      * <p>
      * This container is automatically generated by the compiler when multiple {@link Attribute} annotations
      * are used on a single element, and is not typically used directly.
