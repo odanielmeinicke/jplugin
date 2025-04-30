@@ -13,7 +13,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-abstract class AbstractPluginBuilder implements PluginInfo.Builder {
+public abstract class AbstractPluginBuilder implements PluginInfo.Builder {
 
     // Object
 
@@ -32,9 +32,16 @@ abstract class AbstractPluginBuilder implements PluginInfo.Builder {
 
     private final @NotNull Handlers handlers = Handlers.create();
 
-    public AbstractPluginBuilder(@NotNull Class<?> reference, @NotNull PluginContext context) {
+    public AbstractPluginBuilder(@NotNull Class<?> reference, @NotNull PluginContext context, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
+        // Variables
         this.reference = reference;
         this.context = context;
+
+        this.name = name;
+        this.description = description;
+
+        dependencies(dependencies);
+        categories(categories);
 
         // Priority
         if (reference.isAnnotationPresent(Priority.class)) {

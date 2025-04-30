@@ -412,7 +412,7 @@ final class PluginFinderImpl implements PluginFinder {
         return organizePlugins(plugins).toArray(new PluginInfo[0]);
     }
 
-    // todo: this finds the inner classes plugins also?
+    // todo: if the class is from an specific class loader, should be loaded using that class loader!
     @Override
     public @NotNull Class<?> @NotNull [] classes() throws IOException {
         // Variables

@@ -78,9 +78,22 @@ public class Attributes implements Iterable<AttributeHolder> {
      * Retrieves the first attribute associated with the specified key (case-insensitive).
      *
      * @param key the key of the attribute
-     * @return an {@link Optional} containing the attribute if found, or empty otherwise
+     * @return an AttributeHolder representing this key.
+     * @throws NullPointerException if there's no attribute with that key.
      */
-    public @NotNull Optional<AttributeHolder> getByKey(@NotNull String key) {
+    public @NotNull AttributeHolder getByKey(@NotNull String key) throws NullPointerException {
+        return attributes.stream()
+                .filter(attribute -> attribute.getKey().equalsIgnoreCase(key))
+                .findFirst().orElseThrow(() -> new NullPointerException("there's no attribute with key: " + key));
+    }
+    /**
+     * Checks and get (if available) the first attribute associated with the specified key (case-insensitive).
+     * The main difference from this method to {@link #getByKey(String)} is the {@link Optional} return possibility.
+     *
+     * @param key the key of the attribute
+     * @return an {@link Optional} with the AttributeHolder representing this key (empty if not available).
+     */
+    public @NotNull Optional<AttributeHolder> findByKey(@NotNull String key) {
         return attributes.stream()
                 .filter(attribute -> attribute.getKey().equalsIgnoreCase(key))
                 .findFirst();

@@ -2,6 +2,8 @@
 
 Welcome to the **JPlugin Framework**! This framework is designed to simplify and streamline the development of plugins, enabling developers to create, manage, and utilize classes efficiently and intuitively.
 
+> Don't forget to see the [JPlugin Wiki](https://github.com/odanielmeinicke/jplugin/wiki), there's a lot of features that i didn't included here!
+
 ## 📖 Table of Contents
 
 1. [Overview](#overview)
@@ -13,18 +15,17 @@ Welcome to the **JPlugin Framework**! This framework is designed to simplify and
    - [@Dependency](#dependency)
    - [@Category](#category)
    - [@Priority](#priority)
+   - and some others, check the wiki...
 5. [Usage Examples](#usage-examples)
    - [How to initialize the plugins](#plug-in-initialization-methods)
    - [Basic Plug-in Example](#basic-plug-in-example)
    - [Plug-in with Dependencies](#plug-in-with-dependencies)
    - [Using Categories](#using-categories)
-6. [Advanced Plug-in Features](#advanced-plug-in-features)
-   - [Custom Initializer Example](#custom-initializer-example)
-7. [Considerations](#considerations)
-8. [Troubleshooting](#troubleshooting)
+6. [Considerations](#considerations)
+7. [Troubleshooting](#troubleshooting)
    - [Common Issues](#common-issues)
    - [Contributing](#contributing)
-9. [License](#license)
+8. [License](#license)
 
 ---
 
@@ -64,19 +65,22 @@ jplugin/
 │   │   │       └── meinicke/
 │   │   │           └── plugin/
 │   │   │               ├── annotation/
+│   │   │               ├── attribute/
 │   │   │               ├── category/
+│   │   │               ├── context/
 │   │   │               ├── exception/
 │   │   │               ├── factory/
 │   │   │                   └── handlers/
-│   │   │               ├── info/
 │   │   │               ├── initializer/
-│   │   │               └── main/
+│   │   │               ├── main/
+│   │   │               └── metadata/
 │   │   └── resources/
 │   └── test/
 │       └── java/
 │           └── dev/
 │               └── meinicke/
 │                   └── plugin/
+│                       └── I know, tests are very important, but i'm still creating!
 └── pom.xml
 ```
 
@@ -175,7 +179,7 @@ The @Category annotation represents a category for a plugin, allowing the additi
 Usage
 
 ```java
-@Category(name = "Utility") // It can have multiples categories!
+@Category("Utility") // It can have multiples categories!
 @Initializer(type = MethodPluginInitializer.class)
 @Plugin(name = "Utility Plug-in", description = "A plugin that falls under the utility category.")
 public class UtilityPlugin {
@@ -207,7 +211,7 @@ public static void main(String[] args) {
 ```
 
 #### Parameters
-1. `name`: A unique identifier for the category the plugin belongs to. This helps in filtering and managing plugins by functionality.
+1. `value`: A unique identifier for the category the plugin belongs to. This helps in filtering and managing plugins by functionality.
 
 ### @Priority
 
@@ -340,7 +344,7 @@ import dev.meinicke.plugin.initializer.ConstructorPluginInitializer;
  * <p>
  * It uses the {@link ConstructorPluginInitializer} that initializes using the class constructor, not the {@code initialize} methods.
  */
-@Category(name = "HTTP Page")
+@Category("HTTP Page")
 @Initializer(type = ConstructorPluginInitializer.class) // Initializes using the empty declared constructor
 @Plugin(name = "Authentication Page", description = "The authentication page that allow users to access the dashboard at the website.")
 final class Authentication extends Page {
@@ -409,43 +413,7 @@ private static final class HTTPPageHandler implements PluginHandler {
 
 ```
 
-**Explanation**: This plug-in easily creates an authentication page using categories, you just need to create a class that extends Page, add the `@Category(name = "HTTP Page")` to it, mark as a `@Plugin` and it's done.
-
----
-
-## Advanced Plug-in Features
-The plug-in has advanced features that allows developers enhance the power of the plug-ins and controls a lot of things more!
-
-### Custom Initializer Example
-You can define custom initialization logic for your plug-in using an initializer, allowing for more complex setup procedures.
-
-```java
-import dev.meinicke.plugin.PluginInfo;
-import dev.meinicke.plugin.category.PluginCategory;
-
-public final class MyPluginInitializer extends PluginInitializer {
-
-   // Every plug-in initializer *MUST* have an empty declared constructor like that.
-   private MyPluginInitializer() {
-   }
-
-   @Override
-   public @NotNull PluginInfo.Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories) {
-      // Creates a PluginInfo.Builder with your own initialization mechanic here (custom #build method)
-   }
-
-}
-
-```
-
-```java
-@Initializer(type = MyPluginInitializer.class)
-@Plugin(name = "CustomInitializerPlugin", description = "A plug-in with a custom initializer.")
-public class CustomInitializerPlugin {
-   // The initialization method should be created by you.
-}
-```
-**Explanation**: The MyPluginInitializer class creates a custom PluginInfo object with custom `#start` and `#stop` methods, allowing to change completely how the plug-in should be initialized/interrupted.
+**Explanation**: This plug-in easily creates an authentication page using categories, you just need to create a class that extends Page, add the `@Category("HTTP Page")` to it, mark as a `@Plugin` and it's done.
 
 ---
 

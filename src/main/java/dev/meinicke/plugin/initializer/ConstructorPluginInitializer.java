@@ -211,13 +211,7 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
         // Object
 
         private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
-            super(reference, context);
-
-            // Variables
-            name(name);
-            description(description);
-            dependencies(dependencies);
-            categories(categories);
+            super(reference, context, name, description, dependencies, categories);
         }
 
         // Modules

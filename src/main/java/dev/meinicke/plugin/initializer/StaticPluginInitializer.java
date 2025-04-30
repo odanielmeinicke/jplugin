@@ -12,42 +12,62 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 
 /**
- * A concrete implementation of {@link PluginInitializer} that loads a plugin class
- * without invoking any of its methods or constructors. This is particularly useful
- * for plugins that rely solely on static initialization blocks for setup.
+ * A minimal {@link PluginInitializer} implementation that performs no special lifecycle logic
+ * and does not create or manage a plugin instance.
  * <p>
- * This implementation ensures that plugins are initialized in a lightweight manner,
- * avoiding unnecessary instantiation. The internal {@link PluginInfoImpl} class
- * is responsible for managing the plugin's lifecycle, including state transitions
- * and error handling.
- * </p>
+ * {@code StaticPluginInitializer} simply ensures that the plugin class is loaded into the JVM
+ * during plugin initialization. It performs a no-op for interruption (shutdown) and does not
+ * invoke any static methods such as {@code initialize()} or {@code interrupt()}.
+ * <p>
+ * <b>Initialization Behavior:</b><br>
+ * On initialization, this class:
+ * <ul>
+ *   <li>Attempts to load the plugin class using {@link Class#forName(String)} in the plugin's {@link ClassLoader}.</li>
+ *   <li>If the class is already loaded, no further action is taken.</li>
+ *   <li>No plugin instance is created or stored.</li>
+ *   <li>No reflection or method invocation is performed.</li>
+ * </ul>
+ * This is useful for plugins that rely entirely on static initialization blocks or class-level constructs,
+ * and do not require explicit lifecycle handling.
+ * <p>
+ * ⚠️ <b>Note on {@code static { }} blocks:</b><br>
+ * While the plugin class is guaranteed to be loaded, <strong>static initializers are not guaranteed to run at plugin loading time</strong>
+ * if the JVM or class loader already resolved the class earlier for any reason. Thus, relying on {@code static {}} blocks to perform
+ * plugin registration or critical initialization is discouraged unless the plugin class is never referenced before initialization.
+ * <p>
+ * <b>Interruption Behavior:</b><br>
+ * This class performs no action during plugin shutdown. It assumes the plugin has no cleanup logic or handles it independently.
+ * <p>
+ * <b>Thread Safety:</b><br>
+ * This implementation is stateless and fully thread-safe.
+ * <p>
+ * <b>Usage:</b><br>
+ * Use {@code StaticPluginInitializer} when you want the plugin system to only recognize and load a plugin class, but not perform
+ * any active initialization or instance tracking.
+ * <pre>{@code
+ * \@Initializer(StaticPluginInitializer.class)
+ * \@Plugin
+ * public final class MyPassivePlugin {
+ *     static {
+ *         // This block may or may not be called depending on class load timing
+ *     }
+ * }
+ * }</pre>
+ * <p>
+ * This is ideal for utility-only plugins, annotation processors, service auto-registrars, or plugin bridges that do not require full lifecycle hooks.
+ *
+ * @see PluginInitializer
+ * @see MethodPluginInitializer
  */
 public final class StaticPluginInitializer implements PluginInitializer {
 
     // Object
 
-    /**
-     * Private constructor to prevent illegal instantiation.
-     * This class is designed to be used by reflections.
-     */
     private StaticPluginInitializer() {
     }
 
     // Modules
 
-    /**
-     * Creates a {@link PluginInfo} instance associated with the given plugin class.
-     * This method does not instantiate the plugin class but instead registers it
-     * for lifecycle management.
-     *
-     * @param reference    The class annotated with @Plugin.
-     * @param name         The plugin's name (nullable).
-     * @param description  The plugin's description (nullable).
-     * @param dependencies An array of required plugin dependencies.
-     * @param categories   An array of categories associated with the plugin.
-     * @param context      The context associated with the plugin.
-     * @return A {@link PluginInfo} instance containing the plugin's metadata and lifecycle management logic.
-     */
     @Override
     public @NotNull PluginInfo.Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
         return new BuilderImpl(reference, name, description, dependencies, categories, context);
@@ -66,28 +86,12 @@ public final class StaticPluginInitializer implements PluginInitializer {
 
     // Classes
 
-    /**
-     * A private implementation of {@link PluginInfo} tailored for {@link StaticPluginInitializer}.
-     * It manages the plugin's lifecycle, including startup and shutdown, while ensuring
-     * proper state transitions and error handling.
-     */
     private static final class PluginInfoImpl extends PluginInfo {
 
         // Object
 
-        /**
-         * Constructs a new {@link PluginInfoImpl} instance, linking it to the
-         * {@link StaticPluginInitializer} and setting the initial plugin metadata.
-         *
-         * @param reference    The plugin class reference.
-         * @param name         The plugin name (nullable).
-         * @param description  The plugin description (nullable).
-         * @param dependencies An array of plugin dependencies.
-         * @param categories   An array of category tags.
-         * @param priority     The priority of this plugin
-         */
-        public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories, int priority) {
-            super(reference, name, description, dependencies, categories, StaticPluginInitializer.class, priority);
+        public PluginInfoImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories, @NotNull PluginContext context, int priority) {
+            super(reference, name, description, dependencies, categories, StaticPluginInitializer.class, priority, context);
         }
 
         @Override
@@ -119,20 +123,14 @@ public final class StaticPluginInitializer implements PluginInitializer {
         // Object
 
         private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
-            super(reference, context);
-
-            // Variables
-            name(name);
-            description(description);
-            dependencies(dependencies);
-            categories(categories);
+            super(reference, context, name, description, dependencies, categories);
         }
 
         // Modules
 
         @Override
         public @NotNull PluginInfo build() {
-            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getFactory().getCategory(category)).toArray(PluginCategory[]::new), getPriority());
+            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getFactory().getCategory(category)).toArray(PluginCategory[]::new), getContext(), getPriority());
             info.getCategories().addAll(registeredCategories);
 
             return info;

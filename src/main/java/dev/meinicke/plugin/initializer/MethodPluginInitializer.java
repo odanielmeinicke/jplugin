@@ -13,7 +13,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.Closeable;
 import java.io.Flushable;
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -42,7 +41,16 @@ import java.util.Objects;
  *   <li>{@code "interruption method"}: Defines the name of the method to be invoked during plugin shutdown. If not present, defaults to {@code "interrupt"}.</li>
  * </ul>
  * These attribute values must be of type {@code String}. Non-string values will result in a runtime {@link IllegalAttributeTypeException}.
- * This mechanism allows flexible integration of plugins written with different naming conventions, or requiring customized lifecycle hooks.
+ * <p>
+ * <b>Cross-Class Method Targeting:</b><br>
+ * Those attributes can have a customized class if specified using a {@code '#'} character separating the fully-qualified class name and method name.<br>
+ * For example: {@code "com.myapp.plugins.MyPluginInitializerClass#initialize"} will attempt to use the method {@code initialize} from the class {@code com.myapp.plugins.MyPluginInitializerClass}.
+ * <ul>
+ *   <li>The class will be dynamically resolved using {@code Class.forName(String)} in the same {@link ClassLoader} as the plugin being initialized or interrupted.</li>
+ *   <li>The method resolution rules (static, parameter types, return types) remain the same as when targeting the plugin class itself.</li>
+ *   <li>If the class or method cannot be found or is invalid, a {@link PluginInitializeException} or {@link PluginInterruptException} will be thrown.</li>
+ * </ul>
+ * This mechanism allows developers to delegate lifecycle logic to external utility or service classes, promoting modularity and code reuse.
  * <p>
  * <b>Shutdown Strategy:</b><br>
  * During shutdown, {@code MethodPluginInitializer} checks for a static method with the configured interruption name
@@ -94,6 +102,12 @@ import java.util.Objects;
  * <pre>{@code
  * public static MyPlugin boot(PluginContext context) { ... }
  * public static void teardown(MyPlugin plugin) { ... }
+ * }</pre>
+ * <p>
+ * You may also point these attributes to methods declared in separate classes:
+ * <pre>{@code
+ * \@Attribute(key = "initialization method", type = String.class, string = "com.myapp.plugins.InitHelper#boot")
+ * \@Attribute(key = "interruption method", type = String.class, string = "com.myapp.plugins.InitHelper#teardown")
  * }</pre>
  * <p>
  * <b>Design Notes:</b><br>
@@ -166,12 +180,32 @@ public final class MethodPluginInitializer implements PluginInitializer {
         public void start() throws PluginInitializeException {
             // Get method name by attributes
             @NotNull String methodName = "initialize";
+            @NotNull Class<?> methodClass = getReference();
+
             {
-                @Nullable AttributeHolder nameAttribute = getContext().getAttributes().getByKey("initialization method").orElse(null);
+                @Nullable AttributeHolder nameAttribute = getContext().getAttributes().findByKey("initialization method").orElse(null);
 
                 if (nameAttribute != null) {
                     if (nameAttribute.isString()) {
-                        methodName = nameAttribute.getAsString();
+                        @NotNull String string = nameAttribute.getAsString();
+
+                        if (string.contains("#")) {
+                            @NotNull String[] parts = string.split("#", 2);
+
+                            if (parts.length == 2) {
+                                try {
+                                    methodClass = Class.forName(parts[0]);
+                                } catch (@NotNull ClassNotFoundException e) {
+                                    throw new IllegalStateException("invalid class for initialization method attribute", e);
+                                }
+
+                                methodName = parts[1];
+                            } else {
+                                methodName = parts[0];
+                            }
+                        } else {
+                            methodName = nameAttribute.getAsString();
+                        }
                     } else {
                         throw new IllegalAttributeTypeException("the initialization method attribute must be a string: " + nameAttribute.getValue().getClass().getName());
                     }
@@ -189,10 +223,10 @@ public final class MethodPluginInitializer implements PluginInitializer {
 
                 try {
                     // First try to retrieve method with the context parameter
-                    method = getReference().getDeclaredMethod(methodName, PluginContext.class);
+                    method = methodClass.getDeclaredMethod(methodName, PluginContext.class);
                 } catch (@NotNull NoSuchMethodException ignore) {
                     // Not found, try to retrieve method without the plugin context parameter
-                    method = getReference().getDeclaredMethod(methodName);
+                    method = methodClass.getDeclaredMethod(methodName);
                 }
 
                 // Make it accessible
@@ -240,12 +274,32 @@ public final class MethodPluginInitializer implements PluginInitializer {
 
             // Get method name by attributes
             @NotNull String methodName = "interrupt";
+            @NotNull Class<?> methodClass = getReference();
+
             {
-                @Nullable AttributeHolder nameAttribute = getContext().getAttributes().getByKey("interruption method").orElse(null);
+                @Nullable AttributeHolder nameAttribute = getContext().getAttributes().findByKey("interruption method").orElse(null);
 
                 if (nameAttribute != null) {
                     if (nameAttribute.isString()) {
-                        methodName = nameAttribute.getAsString();
+                        @NotNull String string = nameAttribute.getAsString();
+
+                        if (string.contains("#")) {
+                            @NotNull String[] parts = string.split("#", 2);
+
+                            if (parts.length == 2) {
+                                try {
+                                    methodClass = Class.forName(parts[0]);
+                                } catch (@NotNull ClassNotFoundException e) {
+                                    throw new IllegalStateException("invalid class for interruption method attribute", e);
+                                }
+
+                                methodName = parts[1];
+                            } else {
+                                methodName = nameAttribute.getAsString();
+                            }
+                        } else {
+                            methodName = nameAttribute.getAsString();
+                        }
                     } else {
                         throw new IllegalAttributeTypeException("the interruption method attribute must be a string: " + nameAttribute.getValue().getClass().getName());
                     }
@@ -255,7 +309,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
             try {
                 try {
                     @Nullable Method method = null;
-                    for (@NotNull Method target : getReference().getDeclaredMethods()) {
+                    for (@NotNull Method target : methodClass.getDeclaredMethods()) {
                         if (!target.getName().equals(methodName)) {
                             continue;
                         } else if (!Modifier.isStatic(target.getModifiers())) {
@@ -284,7 +338,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
                             } else if (getInstance() instanceof Flushable) {
                                 ((Flushable) getInstance()).flush();
                             }
-                        } catch (@NotNull IOException e) {
+                        } catch (@NotNull Throwable e) {
                             throw new PluginInterruptException(getReference(), "cannot close/flush plugin instance: " + this, e);
                         }
                     }
@@ -293,6 +347,18 @@ public final class MethodPluginInitializer implements PluginInitializer {
                         throw (PluginInterruptException) e.getCause();
                     }
 
+                    // Try to close instance
+                    try {
+                        if (getInstance() instanceof Closeable) {
+                            ((Closeable) getInstance()).close();
+                        } else if (getInstance() instanceof Flushable) {
+                            ((Flushable) getInstance()).flush();
+                        }
+                    } catch (@NotNull Throwable ignore) {
+                        // Does nothing...
+                    }
+
+                    // Throw interrupt exception
                     throw new PluginInterruptException(getReference(), "cannot invoke interruption method: " + methodName, e);
                 } catch (@NotNull IllegalAccessException e) {
                     throw new PluginInterruptException(getReference(), "cannot access interruption method: " + methodName, e);
@@ -311,14 +377,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
         // Object
 
         private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
-            super(reference, context);
-
-            // todo: those lines should be at super class!
-            // Variables
-            name(name);
-            description(description);
-            dependencies(dependencies);
-            categories(categories);
+            super(reference, context, name, description, dependencies, categories);
         }
 
         // Modules

@@ -65,8 +65,7 @@ public interface PluginFactory extends Iterable<PluginInfo> {
      *
      * @return the global handlers iterable
      */
-    @NotNull
-    Handlers getGlobalHandlers();
+    @NotNull Handlers getGlobalHandlers();
 
     // Categories
 
