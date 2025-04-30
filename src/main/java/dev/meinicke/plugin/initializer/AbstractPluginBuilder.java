@@ -3,6 +3,7 @@ package dev.meinicke.plugin.initializer;
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.annotation.Priority;
 import dev.meinicke.plugin.category.PluginCategory;
+import dev.meinicke.plugin.context.PluginContext;
 import dev.meinicke.plugin.factory.handlers.Handlers;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,6 +18,7 @@ abstract class AbstractPluginBuilder implements PluginInfo.Builder {
     // Object
 
     private final @NotNull Class<?> reference;
+    private final @NotNull PluginContext context;
 
     private @Nullable String name;
     private @Nullable String description;
@@ -30,11 +32,18 @@ abstract class AbstractPluginBuilder implements PluginInfo.Builder {
 
     private final @NotNull Handlers handlers = Handlers.create();
 
-    public AbstractPluginBuilder(@NotNull Class<?> reference) {
+    public AbstractPluginBuilder(@NotNull Class<?> reference, @NotNull PluginContext context) {
         this.reference = reference;
+        this.context = context;
 
+        // Priority
         if (reference.isAnnotationPresent(Priority.class)) {
             this.priority = reference.getAnnotation(Priority.class).value();
+        }
+
+        // Verifications
+        if (context.getPluginClass() != reference) {
+            throw new IllegalArgumentException("the plugin context's reference is not the same from the parameter: " + reference.getName() + " and " + context.getPluginClass().getName());
         }
     }
 
@@ -44,6 +53,11 @@ abstract class AbstractPluginBuilder implements PluginInfo.Builder {
     public @Nullable String getName() {
         return name;
     }
+    @Override
+    public @NotNull PluginContext getContext() {
+        return context;
+    }
+
     @Override
     public @Nullable String getDescription() {
         return description;

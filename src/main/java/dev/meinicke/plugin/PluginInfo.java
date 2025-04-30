@@ -2,6 +2,7 @@ package dev.meinicke.plugin;
 
 import dev.meinicke.plugin.annotation.Priority;
 import dev.meinicke.plugin.category.PluginCategory;
+import dev.meinicke.plugin.context.PluginContext;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.exception.PluginInterruptException;
 import dev.meinicke.plugin.factory.PluginFinder;
@@ -136,6 +137,11 @@ public abstract class PluginInfo {
      */
     private final @NotNull Handlers handlers = Handlers.create();
 
+    /**
+     * The main context associated with this plugin, used to retrieve crucial information like metadata and attributes.
+     */
+    private final @NotNull PluginContext context;
+
     // Constructor
 
     /**
@@ -148,10 +154,11 @@ public abstract class PluginInfo {
      * @param categories   An array of category names for organizing the plugin.
      * @param initializer  The PluginInitializer class responsible for initializing the plugin.
      * @param priority     The loading priority for this plugin.
+     * @param context      The context assigned with this plugin.
      */
     public PluginInfo(@NotNull Class<?> reference, @Nullable String name, @Nullable String description,
                       @NotNull PluginInfo @NotNull [] dependencies, @NotNull PluginCategory @NotNull [] categories,
-                      @NotNull Class<? extends PluginInitializer> initializer, int priority) {
+                      @NotNull Class<? extends PluginInitializer> initializer, int priority, @NotNull PluginContext context) {
         this.name = name;
         this.description = description;
         this.reference = reference;
@@ -159,6 +166,7 @@ public abstract class PluginInfo {
         this.categories = new HashSet<>(Arrays.asList(categories));
         this.initializer = initializer;
         this.priority = priority;
+        this.context = context;
     }
 
     // Getters
@@ -325,6 +333,10 @@ public abstract class PluginInfo {
      */
     public final @Nullable Object getInstance() {
         return instance;
+    }
+
+    public @NotNull PluginContext getContext() {
+        return context;
     }
 
     // Lifecycle Methods
@@ -583,6 +595,13 @@ public abstract class PluginInfo {
          * @return A non-null Handlers instance.
          */
         @NotNull Handlers getHandlers();
+
+        /**
+         * Returns the context of the plugin.
+         *
+         * @return A non-null context of the plugin.
+         */
+        @NotNull PluginContext getContext();
 
         /**
          * Retrieves the current numeric priority value configured in this Builder.

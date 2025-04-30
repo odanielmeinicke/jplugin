@@ -1,7 +1,10 @@
 package dev.meinicke.plugin.initializer;
 
 import dev.meinicke.plugin.PluginInfo;
+import dev.meinicke.plugin.attribute.AttributeHolder;
 import dev.meinicke.plugin.category.PluginCategory;
+import dev.meinicke.plugin.context.PluginContext;
+import dev.meinicke.plugin.exception.IllegalAttributeTypeException;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.exception.PluginInterruptException;
 import dev.meinicke.plugin.main.Plugins;
@@ -17,40 +20,93 @@ import java.lang.reflect.Modifier;
 import java.util.Objects;
 
 /**
- * A concrete implementation of {@link PluginInitializer} that initializes a plugin by invoking a static
- * {@code initialize} method on the plugin class. This implementation is designed for plugins that use
- * a static method for their initialization logic, which can optionally return an instance of the plugin.
+ * A plugin initializer that dynamically initializes and optionally tears down plugin components via statically defined methods
+ * on the plugin class. This implementation, {@code MethodPluginInitializer}, leverages Java reflection to locate and invoke
+ * static methods for the purpose of plugin lifecycle control — specifically, initialization and interruption (shutdown).
  * <p>
- * The static {@code initialize} method must be declared in the plugin class and is invoked without
- * any parameters. It can either return an object instance or have a {@code void} return type. If the method
- * returns an instance, that object is stored and considered the plugin's instance for later use in the
- * plugin lifecycle; if it returns {@code void}, then no instance is stored and the plugin will only
- * undergo static initialization.
+ * <b>Initialization Strategy:</b><br>
+ * The initializer will attempt to invoke a method (default name: {@code "initialize"}) declared on the plugin class.
+ * This method:
+ * <ul>
+ *   <li><strong>Must be static</strong>: It is not expected to operate on an instance.</li>
+ *   <li><strong>May return an object</strong>: If it does, the returned object will be stored as the plugin's runtime instance.</li>
+ *   <li><strong>May return void</strong>: In this case, no instance is associated with the plugin.</li>
+ *   <li><strong>May optionally accept a {@link PluginContext} as parameter</strong>: If two overloads are present, one with and one without a {@code PluginContext},
+ *       the one with {@code PluginContext} takes precedence. This supports plugins that need access to context-specific services or configuration at initialization.</li>
+ * </ul>
  * <p>
- * The stored instance, if present, is subject to lifecycle management. In a typical shutdown procedure,
- * if no custom interrupt method is provided, the instance is examined: if it implements {@link java.io.Closeable}
- * or {@link java.io.Flushable}, the corresponding {@code close()} or {@code flush()} method is invoked (with
- * {@code close()} taking precedence if both are implemented). However, if an {@code interrupt} method is
- * found, the resource cleanup through {@code Closeable} or {@code Flushable} is bypassed.
+ * <b>Custom Method Naming:</b><br>
+ * Starting with the latest enhancement, plugin developers can now specify alternate names for both the initialization and interruption methods using attributes:
+ * <ul>
+ *   <li>{@code "initialization method"}: Defines the name of the method to be invoked during plugin startup. If not present, defaults to {@code "initialize"}.</li>
+ *   <li>{@code "interruption method"}: Defines the name of the method to be invoked during plugin shutdown. If not present, defaults to {@code "interrupt"}.</li>
+ * </ul>
+ * These attribute values must be of type {@code String}. Non-string values will result in a runtime {@link IllegalAttributeTypeException}.
+ * This mechanism allows flexible integration of plugins written with different naming conventions, or requiring customized lifecycle hooks.
  * <p>
- * This implementation also searches for an optional static {@code interrupt} method in the plugin class.
- * The {@code interrupt} method may have either zero parameters or a single, nullable parameter that represents
- * the plugin instance. If the method accepts a parameter and the plugin instance exists, the instance is passed
- * to the method; otherwise, the method is invoked without parameters. If the {@code interrupt} method is present,
- * it takes precedence over any automatic instance resource cleanup, meaning that if it is executed successfully,
- * the instance's {@code close()} or {@code flush()} methods will not be called.
+ * <b>Shutdown Strategy:</b><br>
+ * During shutdown, {@code MethodPluginInitializer} checks for a static method with the configured interruption name
+ * (default {@code "interrupt"}) on the plugin class. This method:
+ * <ul>
+ *   <li><strong>Must be static</strong>.</li>
+ *   <li><strong>Can accept zero or one parameter</strong> — if one parameter is accepted, it will be the instance previously created by the initialization method (if any).</li>
+ *   <li>If such a method is found and successfully invoked, no further cleanup is attempted.</li>
+ * </ul>
+ * If no valid interrupt method is found or an error occurs, the framework attempts an automatic cleanup using interfaces implemented by the plugin instance (if one exists):
+ * <ul>
+ *   <li>If the instance implements {@link java.io.Closeable}, {@code close()} is invoked.</li>
+ *   <li>If the instance does not implement {@code Closeable} but does implement {@link java.io.Flushable}, {@code flush()} is invoked.</li>
+ * </ul>
+ * Note that these two automatic cleanup methods are mutually exclusive, and {@code close()} takes precedence if both are present.
  * <p>
- * Additionally, if multiple static {@code initialize} methods exist (one accepting a plugin instance parameter and
- * one without), the first method encountered (in declaration order) will be executed.
+ * <b>Error Handling:</b><br>
+ * This class provides comprehensive error reporting and state management. Any error occurring during startup (e.g., method not found, incorrect signature,
+ * reflection access issues, or exceptions thrown during method invocation) results in the plugin being marked as {@link PluginInfo.State#FAILED},
+ * and a {@link PluginInitializeException} is thrown.
+ * During shutdown, any problem while invoking the interruption method or cleaning up resources results in a {@link PluginInterruptException}.
+ * The original cause of the failure is preserved in the thrown exception for maximum debugging fidelity.
  * <p>
- * Detailed error handling is integrated into both the startup and shutdown procedures. During initialization,
- * any issues such as the absence of the {@code initialize} method, failure in method access, or exceptions thrown
- * during invocation (including those wrapped in an {@link InvocationTargetException}) will result in the plugin's
- * state being set to FAILED and a corresponding {@link PluginInitializeException} being thrown. Similarly, any
- * problems encountered while invoking the {@code interrupt} method or performing resource cleanup during shutdown
- * will lead to a {@link PluginInterruptException} with detailed context.
+ * <b>Thread Safety and Instance Management:</b><br>
+ * Plugin instances created via initialization methods are stored internally. However, no synchronization is performed on this storage;
+ * it is assumed that lifecycle operations (start, stop) are managed serially by the plugin container.
+ * <p>
+ * <b>Usage Example:</b><br>
+ * Suppose a plugin class is declared as follows:
+ * <pre>{@code
+ * \@Plugin
+ * public final class MyPlugin {
+ *     public static MyPlugin initialize(PluginContext context) {
+ *         return new MyPlugin();
+ *     }
+ *     public static void interrupt(MyPlugin instance) {
+ *         instance.shutdown();
+ *     }
+ * }
+ * }</pre>
+ * If attributes are not explicitly configured, this class will correctly resolve and invoke the {@code initialize} and {@code interrupt} methods by default.
+ * <p>
+ * Alternatively, if a plugin uses different method names, it can declare them as attributes:
+ * <pre>{@code
+ * \@Attribute(key = "initialization method", type = String.class, string = "boot")
+ * \@Attribute(key = "interruption method", type = String.class, string = "teardown")
+ * }</pre>
+ * In such cases, the plugin must define:
+ * <pre>{@code
+ * public static MyPlugin boot(PluginContext context) { ... }
+ * public static void teardown(MyPlugin plugin) { ... }
+ * }</pre>
+ * <p>
+ * <b>Design Notes:</b><br>
+ * This class is final and cannot be subclassed. It is stateless and thread-safe by design, implemented as a singleton-style utility with
+ * a private constructor and equality semantics overridden to ensure consistency across plugin graph traversal.
+ *
+ * @see PluginInitializer
+ * @see PluginContext
+ * @see PluginInfo
+ * @see PluginInitializeException
+ * @see PluginInterruptException
+ * @see AttributeHolder
  */
-// TODO: 13/02/2025 Add method names
 public final class MethodPluginInitializer implements PluginInitializer {
 
     // Object
@@ -72,16 +128,13 @@ public final class MethodPluginInitializer implements PluginInitializer {
      * @param description  A textual description of the plugin's functionality, which may be null.
      * @param dependencies An array of {@link PluginInfo} objects representing the dependencies required by the plugin.
      * @param categories   An array of category tags that classify the plugin.
+     * @param context      The context associated with the plugin.
      * @return A fully constructed {@link PluginInfo} instance that manages the initialization and shutdown
      *         of the plugin.
      */
     @Override
-    public @NotNull PluginInfo.Builder create(@NotNull Class<?> reference,
-                                      @Nullable String name,
-                                      @Nullable String description,
-                                      @NotNull Class<?> @NotNull [] dependencies,
-                                      @NotNull String @NotNull [] categories) {
-        return new BuilderImpl(reference, name, description, dependencies, categories);
+    public @NotNull PluginInfo.Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
+        return new BuilderImpl(reference, name, description, dependencies, categories, context);
     }
 
     // Implementations
@@ -97,103 +150,65 @@ public final class MethodPluginInitializer implements PluginInitializer {
 
     // Classes
 
-    /**
-     * Internal implementation of {@link PluginInfo} for plugins that use a static method-based initialization.
-     * <p>
-     * This class encapsulates the complete lifecycle management logic of the plugin. During startup,
-     * it attempts to locate and invoke a static {@code initialize} method on the plugin class. The method
-     * is required to be static; if it is not, an {@link IllegalStateException} is thrown. Once invoked, the
-     * method may either return an object instance—which is then stored as the plugin's instance—or have a
-     * {@code void} return type, in which case no instance is stored.
-     * <p>
-     * During shutdown, the {@code close()} method first searches for an optional static {@code interrupt} method.
-     * The search is performed over all declared methods of the plugin class, and only methods named {@code interrupt}
-     * that are static and have at most one parameter are considered. If such a method is found:
-     * <ul>
-     *     <li>If the {@code interrupt} method accepts one parameter, the current plugin instance (which may be null)
-     *         is passed as an argument.</li>
-     *     <li>If the {@code interrupt} method accepts no parameters, it is invoked without any arguments.</li>
-     * </ul>
-     * If the {@code interrupt} method is executed, any automatic resource cleanup (i.e. invoking {@code close()} on
-     * a {@link java.io.Closeable} instance or {@code flush()} on a {@link java.io.Flushable} instance) is skipped.
-     * <p>
-     * If no valid {@code interrupt} method is found and an instance exists, the implementation then checks if the
-     * instance implements {@link java.io.Closeable} or {@link java.io.Flushable}. If it implements {@code Closeable},
-     * its {@code close()} method is invoked; if not, but it implements {@code Flushable}, then its {@code flush()} method
-     * is called. In cases where the instance implements both, only {@code close()} is executed.
-     * <p>
-     * Both the startup and shutdown procedures incorporate comprehensive error handling. Any failure during
-     * the invocation of the {@code initialize} method will result in the plugin's state being marked as FAILED,
-     * and an appropriate {@link PluginInitializeException} will be thrown. Similarly, any issues during the
-     * shutdown phase—whether in invoking the {@code interrupt} method or during resource cleanup—will cause a
-     * {@link PluginInterruptException} to be thrown with detailed contextual information.
-     */
     private static final class PluginInfoImpl extends PluginInfo {
 
-        /**
-         * Constructs a new {@link PluginInfoImpl} instance with the specified metadata and associates it with
-         * the {@link MethodPluginInitializer}.
-         *
-         * @param reference    The plugin class reference.
-         * @param name         The name of the plugin, which may be null.
-         * @param description  A description of the plugin, which may be null.
-         * @param dependencies An array of {@link PluginInfo} objects representing required dependencies.
-         * @param categories   An array of category tags for the plugin.
-         * @param priority     The priority of this plugin
-         */
         public PluginInfoImpl(@NotNull Class<?> reference,
                               @Nullable String name,
                               @Nullable String description,
                               @NotNull PluginInfo @NotNull [] dependencies,
                               @NotNull PluginCategory @NotNull [] categories,
+                              @NotNull PluginContext context,
                               int priority) {
-            super(reference, name, description, dependencies, categories, MethodPluginInitializer.class, priority);
+            super(reference, name, description, dependencies, categories, MethodPluginInitializer.class, priority, context);
         }
 
-        /**
-         * Starts the plugin by locating and invoking its static {@code initialize} method.
-         * <p>
-         * The method performs the following steps:
-         * <ol>
-         *     <li>Invokes the superclass {@code start()} to perform any preliminary startup tasks.</li>
-         *     <li>Searches for a method named {@code initialize} declared in the plugin class.
-         *         The method must be static; if it is not, an {@link IllegalStateException} is thrown.
-         *         If multiple {@code initialize} methods exist (one accepting a plugin instance parameter and one without),
-         *         the first encountered method is executed.</li>
-         *     <li>Sets the method as accessible and invokes it without parameters.</li>
-         *     <li>If the {@code initialize} method returns an object instance, this instance is stored for later use;
-         *         if it returns {@code void}, no instance is stored and the plugin is treated as having no instance.</li>
-         *     <li>Upon successful execution, the plugin state is set to RUNNING.</li>
-         * </ol>
-         * <p>
-         * Any exceptions occurring during these steps (including issues with method lookup, access, or invocation)
-         * are caught and handled as follows:
-         * <ul>
-         *     <li>If an {@link InvocationTargetException} is encountered and its cause is an instance of
-         *         {@link PluginInitializeException}, the cause is rethrown.</li>
-         *     <li>Otherwise, a new {@link PluginInitializeException} is thrown with a detailed message and the underlying cause.</li>
-         *     <li>The plugin state is set to FAILED if any error occurs.</li>
-         * </ul>
-         *
-         * @throws PluginInitializeException If the {@code initialize} method cannot be found, accessed, or invoked properly,
-         *                                   or if it results in an exception during plugin startup.
-         */
         @Override
         public void start() throws PluginInitializeException {
+            // Get method name by attributes
+            @NotNull String methodName = "initialize";
+            {
+                @Nullable AttributeHolder nameAttribute = getContext().getAttributes().getByKey("initialization method").orElse(null);
+
+                if (nameAttribute != null) {
+                    if (nameAttribute.isString()) {
+                        methodName = nameAttribute.getAsString();
+                    } else {
+                        throw new IllegalAttributeTypeException("the initialization method attribute must be a string: " + nameAttribute.getValue().getClass().getName());
+                    }
+                }
+            }
+
+            // Start initialization
             try {
                 // Starting
                 setState(State.STARTING);
                 handle("start", (handler) -> handler.start(this));
 
-                // Initialize by method
-                @NotNull Method method = getReference().getDeclaredMethod("initialize");
+                // Find the initialization method
+                @NotNull Method method;
+
+                try {
+                    // First try to retrieve method with the context parameter
+                    method = getReference().getDeclaredMethod(methodName, PluginContext.class);
+                } catch (@NotNull NoSuchMethodException ignore) {
+                    // Not found, try to retrieve method without the plugin context parameter
+                    method = getReference().getDeclaredMethod(methodName);
+                }
+
+                // Make it accessible
                 method.setAccessible(true);
+
                 // Verify that the initialize method is static; if not, throw an exception.
                 if (!Modifier.isStatic(method.getModifiers())) {
                     throw new IllegalStateException("the plugin's initialize method must be static");
                 }
-                // Invoke the static initialize method. It may return an instance or be void.
-                this.instance = method.invoke(null);
+
+                // Invoke the static initialization method. It may return an instance or be void.
+                if (method.getParameterCount() == 0) {
+                    this.instance = method.invoke(null);
+                } else {
+                    this.instance = method.invoke(null, getContext());
+                }
 
                 // Mark as running
                 setState(State.RUNNING);
@@ -203,53 +218,17 @@ public final class MethodPluginInitializer implements PluginInitializer {
                     if (throwable.getCause() instanceof PluginInitializeException) {
                         throw (PluginInitializeException) throwable.getCause();
                     }
-                    throw new PluginInitializeException(getReference(), "cannot invoke initialize method", throwable.getCause());
+                    throw new PluginInitializeException(getReference(), "cannot invoke initialization method: " + methodName, throwable.getCause());
                 } else if (throwable instanceof NoSuchMethodException) {
-                    throw new PluginInitializeException(getReference(), "cannot find initialize method", throwable);
+                    throw new PluginInitializeException(getReference(), "cannot find initialization method: " + methodName, throwable);
                 } else if (throwable instanceof IllegalAccessException) {
-                    throw new PluginInitializeException(getReference(), "cannot access initialize method", throwable);
+                    throw new PluginInitializeException(getReference(), "cannot access initialization method: " + methodName, throwable);
                 } else {
                     throw new RuntimeException("cannot initialize plugin: " + this, throwable);
                 }
             }
         }
 
-        /**
-         * Shuts down the plugin by first attempting to invoke an optional static {@code interrupt} method,
-         * and then, if necessary, performing resource cleanup on the plugin instance.
-         * <p>
-         * The shutdown procedure proceeds as follows:
-         * <ol>
-         *     <li>Invokes the superclass {@code close()} to perform any preliminary shutdown tasks.</li>
-         *     <li>Iterates over all declared methods of the plugin class to search for a static method named
-         *         {@code interrupt} that has at most one parameter. If multiple candidate methods exist, the first
-         *         one encountered is selected.</li>
-         *     <li>If an {@code interrupt} method is found:
-         *         <ul>
-         *             <li>If the method accepts one parameter, it is invoked with the current plugin instance
-         *                 (which may be null) as the argument.</li>
-         *             <li>If the method accepts no parameters, it is invoked without any arguments.</li>
-         *         </ul>
-         *         When the {@code interrupt} method is invoked successfully, any automatic resource cleanup of the
-         *         plugin instance (i.e. invoking {@code close()} on a {@link java.io.Closeable} or {@code flush()} on
-         *         a {@link java.io.Flushable}) is bypassed.</li>
-         *     <li>If no suitable {@code interrupt} method is found and a plugin instance exists, the method then
-         *         checks whether the instance implements {@link java.io.Closeable} or {@link java.io.Flushable}:
-         *         <ul>
-         *             <li>If the instance implements {@code Closeable}, its {@code close()} method is invoked.</li>
-         *             <li>If not, but the instance implements {@code Flushable}, its {@code flush()} method is invoked.</li>
-         *             <li>If the instance implements both interfaces, only the {@code close()} method is executed.</li>
-         *         </ul>
-         *     </li>
-         *     <li>Any exceptions during the invocation of the {@code interrupt} method or during resource cleanup are
-         *         caught and rethrown as a {@link PluginInterruptException} with detailed error information.</li>
-         *     <li>Finally, regardless of any errors, the internal plugin instance is cleared (set to null) and the
-         *         plugin state is set to IDLE, indicating a complete shutdown.</li>
-         * </ol>
-         *
-         * @throws PluginInterruptException If an error occurs during the invocation of the {@code interrupt} method,
-         *                                  or if there is an issue during the resource cleanup of the plugin instance.
-         */
         @Override
         public void close() throws PluginInterruptException {
             if (!getState().isRunning()) {
@@ -259,11 +238,25 @@ public final class MethodPluginInitializer implements PluginInitializer {
             // Super close
             super.close();
 
+            // Get method name by attributes
+            @NotNull String methodName = "interrupt";
+            {
+                @Nullable AttributeHolder nameAttribute = getContext().getAttributes().getByKey("interruption method").orElse(null);
+
+                if (nameAttribute != null) {
+                    if (nameAttribute.isString()) {
+                        methodName = nameAttribute.getAsString();
+                    } else {
+                        throw new IllegalAttributeTypeException("the interruption method attribute must be a string: " + nameAttribute.getValue().getClass().getName());
+                    }
+                }
+            }
+
             try {
                 try {
                     @Nullable Method method = null;
                     for (@NotNull Method target : getReference().getDeclaredMethods()) {
-                        if (!target.getName().equals("interrupt")) {
+                        if (!target.getName().equals(methodName)) {
                             continue;
                         } else if (!Modifier.isStatic(target.getModifiers())) {
                             continue;
@@ -300,9 +293,9 @@ public final class MethodPluginInitializer implements PluginInitializer {
                         throw (PluginInterruptException) e.getCause();
                     }
 
-                    throw new PluginInterruptException(getReference(), "cannot invoke interrupt method", e);
+                    throw new PluginInterruptException(getReference(), "cannot invoke interruption method: " + methodName, e);
                 } catch (@NotNull IllegalAccessException e) {
-                    throw new PluginInterruptException(getReference(), "cannot access interrupt method", e);
+                    throw new PluginInterruptException(getReference(), "cannot access interruption method: " + methodName, e);
                 }
 
                 // Finish close
@@ -317,9 +310,10 @@ public final class MethodPluginInitializer implements PluginInitializer {
 
         // Object
 
-        private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
-            super(reference);
+        private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
+            super(reference, context);
 
+            // todo: those lines should be at super class!
             // Variables
             name(name);
             description(description);
@@ -331,7 +325,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
 
         @Override
         public @NotNull PluginInfo build() {
-            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getFactory().getCategory(category)).toArray(PluginCategory[]::new), getPriority());
+            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getFactory().getCategory(category)).toArray(PluginCategory[]::new), getContext(), getPriority());
             info.getCategories().addAll(registeredCategories);
 
             return info;

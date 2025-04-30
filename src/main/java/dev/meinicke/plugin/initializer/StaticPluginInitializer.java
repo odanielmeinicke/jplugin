@@ -2,6 +2,7 @@ package dev.meinicke.plugin.initializer;
 
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.category.PluginCategory;
+import dev.meinicke.plugin.context.PluginContext;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.exception.PluginInterruptException;
 import dev.meinicke.plugin.main.Plugins;
@@ -44,11 +45,12 @@ public final class StaticPluginInitializer implements PluginInitializer {
      * @param description  The plugin's description (nullable).
      * @param dependencies An array of required plugin dependencies.
      * @param categories   An array of categories associated with the plugin.
+     * @param context      The context associated with the plugin.
      * @return A {@link PluginInfo} instance containing the plugin's metadata and lifecycle management logic.
      */
     @Override
-    public @NotNull PluginInfo.Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
-        return new BuilderImpl(reference, name, description, dependencies, categories);
+    public @NotNull PluginInfo.Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
+        return new BuilderImpl(reference, name, description, dependencies, categories, context);
     }
 
     // Implementations
@@ -116,8 +118,8 @@ public final class StaticPluginInitializer implements PluginInitializer {
 
         // Object
 
-        private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories) {
-            super(reference);
+        private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
+            super(reference, context);
 
             // Variables
             name(name);
