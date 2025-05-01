@@ -44,7 +44,7 @@ public class IntegerMetadataType implements MetadataType<Integer> {
         if (integer != null) {
             if (getFromInclusive() != null && integer < getFromInclusive()) {
                 throw new IllegalStateException("the integer must be more than or equal to " + getFromInclusive() + ", the current is: " + integer);
-            } else if (getToExclusive() != null && integer > getToExclusive()) {
+            } else if (getToExclusive() != null && integer >= getToExclusive()) {
                 throw new IllegalStateException("the integer must be lower than " + getToExclusive() + ", the current is: " + integer);
             }
         }

@@ -44,7 +44,7 @@ public class FloatMetadataType implements MetadataType<Float> {
         if (l != null) {
             if (getFromInclusive() != null && l < getFromInclusive()) {
                 throw new IllegalStateException("the float must be more than or equal to " + getFromInclusive() + ", the current is: " + l);
-            } else if (getToExclusive() != null && l > getToExclusive()) {
+            } else if (getToExclusive() != null && l >= getToExclusive()) {
                 throw new IllegalStateException("the float must be lower than " + getToExclusive() + ", the current is: " + l);
             }
         }

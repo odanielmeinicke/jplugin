@@ -44,7 +44,7 @@ public class LongMetadataType implements MetadataType<Long> {
         if (l != null) {
             if (getFromInclusive() != null && l < getFromInclusive()) {
                 throw new IllegalStateException("the long must be more than or equal to " + getFromInclusive() + ", the current is: " + l);
-            } else if (getToExclusive() != null && l > getToExclusive()) {
+            } else if (getToExclusive() != null && l >= getToExclusive()) {
                 throw new IllegalStateException("the long must be lower than " + getToExclusive() + ", the current is: " + l);
             }
         }
