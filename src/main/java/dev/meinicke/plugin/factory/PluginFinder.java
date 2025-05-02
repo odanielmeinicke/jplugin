@@ -4,6 +4,8 @@ import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.category.PluginCategory;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.initializer.PluginInitializer;
+import dev.meinicke.plugin.metadata.Metadata;
+import dev.meinicke.plugin.metadata.type.MetadataType;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -269,6 +271,307 @@ public interface PluginFinder {
      * @return This PluginFinder instance with the instance filter updated.
      */
     @NotNull PluginFinder addInstance(@NotNull Object instance);
+
+    // Metadata
+
+    /**
+     * Returns the metadata container associated with this {@code PluginFinder}.
+     * <p>
+     * All metadata entries stored in this container will be automatically and directly
+     * applied to every plugin loaded using this finder. This allows you to configure
+     * shared or default metadata properties programmatically, ensuring consistency across
+     * plugin instances.
+     * <p>
+     * The returned {@link Metadata} object is mutable and can be modified directly to add,
+     * remove, or update values or types.
+     *
+     * @return the mutable {@link Metadata} instance used to assign metadata to plugins
+     *         during the loading process
+     * @since 1.1.7
+     */
+    @NotNull Metadata getMetadata();
+
+    /**
+     * Sets a raw metadata entry for the specified key and value.
+     * <p>
+     * This method is a convenience shortcut for inserting entries into the metadata container
+     * retrieved via {@link #getMetadata()}. The inserted key-value pair will be automatically
+     * applied to all plugins that are loaded using this {@code PluginFinder}.
+     * <p>
+     * This operation does not assign an explicit type to the metadata key. If type safety
+     * is important, consider using the overloaded method that accepts a {@link MetadataType}.
+     *
+     * @param key   the case-insensitive metadata key
+     * @param value the metadata value to associate with the key
+     * @return this finder instance for method chaining
+     *
+     * @see #getMetadata()
+     * @see #metadata(String, MetadataType, Object)
+     * @since 1.1.7
+     */
+    default @NotNull PluginFinder metadata(@NotNull String key, @NotNull Object value) {
+        getMetadata().put(key, value);
+        return this;
+    }/**
+     * Sets a typed metadata entry for the specified key, type, and value.
+     * <p>
+     * This method allows you to specify a {@link MetadataType} alongside the value,
+     * ensuring type-safe retrieval and use of the metadata later on. The key, type,
+     * and value are all stored in the internal metadata container, and this metadata
+     * will be directly applied to all plugins loaded through this {@code PluginFinder}.
+     * <p>
+     * Using a typed entry helps enforce value constraints and avoids class cast issues
+     * when accessing metadata downstream.
+     *
+     * @param key   the case-insensitive metadata key
+     * @param type  the metadata type used to enforce type safety
+     * @param value the value to associate with the key and type
+     * @param <T>   the type of the metadata value
+     * @return this finder instance for method chaining
+     *
+     * @see #getMetadata()
+     * @see MetadataType
+     * @since 1.1.7
+     */
+    default <T> @NotNull PluginFinder metadata(@NotNull String key, @NotNull MetadataType<T> type, @NotNull T value) {
+        getMetadata().setType(key, type);
+        getMetadata().put(key, value);
+        return this;
+    }
+
+    /**
+     * Adds a metadata filter that will match only plugins containing a metadata
+     * with the specified key, ignoring the value type or object.
+     *
+     * @param key   the attribute key to check
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addRequireMetadata(@NotNull String key);
+    /**
+     * Adds a metadata filter that will match only plugins containing a metadata
+     * with the specified key and value object.
+     *
+     * <p>
+     * The metadata must be assignable with the specific class type.
+     * </p>
+     *
+     * @param key   the attribute key to check
+     * @param type  the expected type value
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addRequireMetadata(@NotNull String key, @NotNull Class<?> type);
+
+    // Attributes
+
+    /**
+     * Adds an attribute filter that will match only plugins containing an attribute with the specified key.
+     *
+     * @param key   the attribute key to check
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a String attribute
+     * with the specified key and value.
+     *
+     * @param key   the attribute key to check
+     * @param value the expected String value
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, @NotNull String value);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a Class attribute
+     * with the specified key and value.
+     *
+     * @param key   the attribute key to check
+     * @param value the expected Class value
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, @NotNull Class<?> value);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing an int attribute
+     * with the specified key and value.
+     *
+     * @param key   the attribute key to check
+     * @param value the expected int value
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, int value);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a long attribute
+     * with the specified key and value.
+     *
+     * @param key   the attribute key to check
+     * @param value the expected long value
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, long value);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a float attribute
+     * with the specified key and value.
+     *
+     * @param key   the attribute key to check
+     * @param value the expected float value
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, float value);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a double attribute
+     * with the specified key and value.
+     *
+     * @param key   the attribute key to check
+     * @param value the expected double value
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, double value);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a boolean attribute
+     * with the specified key and value.
+     *
+     * @param key   the attribute key to check
+     * @param value the expected boolean value
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, boolean value);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a byte attribute
+     * with the specified key and value.
+     *
+     * @param key   the attribute key to check
+     * @param value the expected byte value
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, byte value);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a short attribute
+     * with the specified key and value.
+     *
+     * @param key   the attribute key to check
+     * @param value the expected short value
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, short value);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a char attribute
+     * with the specified key and value.
+     *
+     * @param key   the attribute key to check
+     * @param value the expected char value
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, char value);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a String attribute
+     * with the specified key and any of the given values.
+     *
+     * @param key    the attribute key to check
+     * @param values the accepted String values
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, @NotNull String... values);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a Class attribute
+     * with the specified key and any of the given values.
+     *
+     * @param key    the attribute key to check
+     * @param values the accepted Class values
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, @NotNull Class<?>... values);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing an int attribute
+     * with the specified key and any of the given values.
+     *
+     * @param key    the attribute key to check
+     * @param values the accepted int values
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, int... values);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a long attribute
+     * with the specified key and any of the given values.
+     *
+     * @param key    the attribute key to check
+     * @param values the accepted long values
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, long... values);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a float attribute
+     * with the specified key and any of the given values.
+     *
+     * @param key    the attribute key to check
+     * @param values the accepted float values
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, float... values);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a double attribute
+     * with the specified key and any of the given values.
+     *
+     * @param key    the attribute key to check
+     * @param values the accepted double values
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, double... values);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a boolean attribute
+     * with the specified key and any of the given values.
+     *
+     * @param key    the attribute key to check
+     * @param values the accepted boolean values
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, boolean... values);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a byte attribute
+     * with the specified key and any of the given values.
+     *
+     * @param key    the attribute key to check
+     * @param values the accepted byte values
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, byte... values);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a short attribute
+     * with the specified key and any of the given values.
+     *
+     * @param key    the attribute key to check
+     * @param values the accepted short values
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, short... values);
+
+    /**
+     * Adds an attribute filter that will match only plugins containing a char attribute
+     * with the specified key and any of the given values.
+     *
+     * @param key    the attribute key to check
+     * @param values the accepted char values
+     * @return this finder instance for chaining
+     */
+    @NotNull PluginFinder addAttribute(@NotNull String key, char... values);
+
+    // States
 
     /**
      * Filters the search to include only plugins that are in one of the specified states.

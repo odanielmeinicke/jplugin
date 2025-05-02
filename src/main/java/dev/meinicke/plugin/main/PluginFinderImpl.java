@@ -3,10 +3,7 @@ package dev.meinicke.plugin.main;
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.PluginInfo.Builder;
 import dev.meinicke.plugin.PluginInfo.State;
-import dev.meinicke.plugin.annotation.Category;
-import dev.meinicke.plugin.annotation.Dependency;
-import dev.meinicke.plugin.annotation.Initializer;
-import dev.meinicke.plugin.annotation.Plugin;
+import dev.meinicke.plugin.annotation.*;
 import dev.meinicke.plugin.category.PluginCategory;
 import dev.meinicke.plugin.context.PluginContext;
 import dev.meinicke.plugin.exception.InvalidPluginException;
@@ -17,6 +14,7 @@ import dev.meinicke.plugin.factory.PluginFinder;
 import dev.meinicke.plugin.factory.handlers.PluginHandler;
 import dev.meinicke.plugin.initializer.ConstructorPluginInitializer;
 import dev.meinicke.plugin.initializer.PluginInitializer;
+import dev.meinicke.plugin.metadata.Metadata;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,6 +50,11 @@ final class PluginFinderImpl implements PluginFinder {
     private final @NotNull Set<State> states = new HashSet<>();
 
     private final @NotNull Class<?> caller;
+
+    private final @NotNull Map<String, Object> attributes = new HashMap<>();
+    private final @NotNull Map<String, Class<?>> metadataTypes = new HashMap<>();
+
+    private final @NotNull Metadata metadata = new Metadata();
 
     private volatile boolean shutdownHook = true;
 
@@ -309,6 +312,148 @@ final class PluginFinderImpl implements PluginFinder {
         return this;
     }
 
+    @Override
+    public @NotNull Metadata getMetadata() {
+        return metadata;
+    }
+
+    @Override
+    public @NotNull PluginFinder addRequireMetadata(@NotNull String key) {
+        metadataTypes.put(key.toLowerCase(), null);
+        return this;
+    }
+    @Override
+    public @NotNull PluginFinder addRequireMetadata(@NotNull String key, @NotNull Class<?> type) {
+        metadataTypes.put(key.toLowerCase(), type);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key) {
+        attributes.put(key.toLowerCase(), null);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, @NotNull String value) {
+        attributes.put(key.toLowerCase(), value);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, @NotNull Class<?> value) {
+        attributes.put(key.toLowerCase(), value);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, int value) {
+        attributes.put(key.toLowerCase(), value);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, long value) {
+        attributes.put(key.toLowerCase(), value);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, float value) {
+        attributes.put(key.toLowerCase(), value);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, double value) {
+        attributes.put(key.toLowerCase(), value);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, boolean value) {
+        attributes.put(key.toLowerCase(), value);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, byte value) {
+        attributes.put(key.toLowerCase(), value);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, short value) {
+        attributes.put(key.toLowerCase(), value);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, char value) {
+        attributes.put(key.toLowerCase(), value);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, @NotNull String... values) {
+        attributes.put(key.toLowerCase(), values);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, @NotNull Class<?>... values) {
+        attributes.put(key.toLowerCase(), values);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, int... values) {
+        attributes.put(key.toLowerCase(), values);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, long... values) {
+        attributes.put(key.toLowerCase(), values);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, float... values) {
+        attributes.put(key.toLowerCase(), values);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, double... values) {
+        attributes.put(key.toLowerCase(), values);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, boolean... values) {
+        attributes.put(key.toLowerCase(), values);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, byte... values) {
+        attributes.put(key.toLowerCase(), values);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, short... values) {
+        attributes.put(key.toLowerCase(), values);
+        return this;
+    }
+
+    @Override
+    public @NotNull PluginFinder addAttribute(@NotNull String key, char... values) {
+        attributes.put(key.toLowerCase(), values);
+        return this;
+    }
+
     // States
 
     @Override
@@ -362,7 +507,6 @@ final class PluginFinderImpl implements PluginFinder {
 
         return true;
     }
-    @SuppressWarnings("RedundantIfStatement")
     @Override
     public boolean matches(@NotNull Class<?> reference) {
         if (!reference.isAnnotationPresent(Plugin.class)) {
@@ -393,9 +537,30 @@ final class PluginFinderImpl implements PluginFinder {
             return false;
         }
 
+        // Check metadata
+        for (@NotNull Entry<String, Class<?>> entry : metadataTypes.entrySet()) {
+            @Nullable RequireMetadata annotation = Arrays.stream(reference.getAnnotationsByType(RequireMetadata.class)).filter(a -> a.key().equalsIgnoreCase(entry.getKey())).findFirst().orElse(null);
+
+            if (annotation == null) {
+                return false;
+            } else if (entry.getValue() != null && !entry.getValue().isAssignableFrom(annotation.type())) {
+                return false;
+            }
+        }
+
+        // Check attribute
+        for (@NotNull Entry<String, Object> entry : attributes.entrySet()) {
+            @Nullable Attribute annotation = Arrays.stream(reference.getAnnotationsByType(Attribute.class)).filter(a -> a.key().equalsIgnoreCase(entry.getKey())).findFirst().orElse(null);
+
+            if (annotation == null) {
+                return false;
+            } else if (entry.getValue() != null && !entry.getValue().getClass().isAssignableFrom(annotation.type())) {
+                return false;
+            }
+        }
+
         return true;
     }
-
     @Override
     public @NotNull PluginInfo @NotNull [] plugins() {
         // Variables
@@ -412,7 +577,6 @@ final class PluginFinderImpl implements PluginFinder {
         return organizePlugins(plugins).toArray(new PluginInfo[0]);
     }
 
-    // todo: if the class is from an specific class loader, should be loaded using that class loader!
     @Override
     public @NotNull Class<?> @NotNull [] classes() throws IOException {
         // Variables
@@ -494,6 +658,8 @@ final class PluginFinderImpl implements PluginFinder {
 
             // Create instance
             @NotNull PluginContext context = new PluginContextImpl(reference, caller, this);
+            getMetadata().merge(context.getMetadata());
+
             @NotNull Builder builder = initializer.create(reference, name, description, dependencies.toArray(new Class[0]), new String[0], context);
 
             // Add to the builder only the categories that actually exists (for now)
