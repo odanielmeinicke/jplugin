@@ -49,8 +49,6 @@ final class PluginFinderImpl implements PluginFinder {
     private final @NotNull Set<Object> instances = new HashSet<>();
     private final @NotNull Set<State> states = new HashSet<>();
 
-    private final @NotNull Class<?> caller;
-
     private final @NotNull Map<String, Object> attributes = new HashMap<>();
     private final @NotNull Map<String, Class<?>> metadataTypes = new HashMap<>();
 
@@ -60,7 +58,11 @@ final class PluginFinderImpl implements PluginFinder {
 
     public PluginFinderImpl(@NotNull PluginFactoryImpl factory) {
         this.factory = factory;
+    }
 
+    // Getters
+
+    public @NotNull Class<?> getCallerClass() {
         // Retrieve caller class
         @NotNull StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
         @Nullable Class<?> caller = null;
@@ -79,11 +81,20 @@ final class PluginFinderImpl implements PluginFinder {
                 // Select first
                 try {
                     caller = Class.forName(element.getClassName());
-                } catch (@NotNull ClassNotFoundException e) {
-                    throw new RuntimeException("cannot retrieve caller class", e);
+                    break;
+                } catch (@NotNull ClassNotFoundException ignore1) {
+                    if (!classLoaders.isEmpty()) {
+                        for (@NotNull ClassLoader loader : classLoaders) try {
+                            caller = Class.forName(element.getClassName(), false, loader);
+                            break;
+                        } catch (@NotNull ClassNotFoundException ignore2) {
+                        }
+                    }
                 }
 
-                break;
+                if (caller == null) {
+                    throw new RuntimeException("cannot retrieve caller class: " + element.getClassName());
+                }
             }
         } else {
             throw new RuntimeException("invalid stack traces to retrieve caller class");
@@ -93,7 +104,7 @@ final class PluginFinderImpl implements PluginFinder {
         if (caller == null) {
             throw new IllegalStateException("cannot retrieve caller class");
         } else {
-            this.caller = caller;
+            return caller;
         }
     }
 
@@ -603,7 +614,9 @@ final class PluginFinderImpl implements PluginFinder {
 
         // Collect all references
         if (classLoaders.isEmpty()) {
+            @NotNull Class<?> caller = getCallerClass();
             @NotNull URL url = caller.getProtectionDomain().getCodeSource().getLocation();
+
             Classes.getAllTypeClassesWithVisitor(url, caller.getClassLoader(), consumer);
         } else {
             Classes.getAllTypeClassesWithVisitor(classLoaders, consumer);
@@ -657,6 +670,7 @@ final class PluginFinderImpl implements PluginFinder {
             if (description.isEmpty()) description = null;
 
             // Create instance
+            @NotNull Class<?> caller = getCallerClass();
             @NotNull PluginContext context = new PluginContextImpl(reference, caller, this);
             getMetadata().merge(context.getMetadata());
 
