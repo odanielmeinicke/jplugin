@@ -2,10 +2,7 @@ package dev.meinicke.plugin.annotation;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * Indicates that a plugin requires the presence of specific compile‑time or runtime metadata
@@ -39,6 +36,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
+@Repeatable(RequiresMetadata.class)
 public @interface RequireMetadata {
 
     /**
@@ -59,20 +57,4 @@ public @interface RequireMetadata {
      */
     @NotNull Class<?> type() default void.class;
 
-    /**
-     * Container annotation to allow multiple {@link RequireMetadata} on the same type.
-     *
-     * @see RequireMetadata
-     */
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.TYPE)
-    @interface RequiresMetadata {
-
-        /**
-         * The array of {@link RequireMetadata} annotations to apply.
-         *
-         * @return the array of metadata requirements
-         */
-        @NotNull RequireMetadata @NotNull [] value();
-    }
 }

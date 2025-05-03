@@ -29,7 +29,7 @@ import java.lang.annotation.*;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Repeatable(value = Dependency.Dependencies.class)
+@Repeatable(value = Dependencies.class)
 public @interface Dependency {
     /**
      * Specifies the class type that represents the required dependency.
@@ -37,20 +37,4 @@ public @interface Dependency {
      * @return The dependency class type.
      */
     @NotNull Class<?> type();
-
-    /**
-     * A container annotation for multiple {@link Dependency} annotations.
-     * <p>
-     * This is used internally by Java's {@link Repeatable} mechanism to store multiple dependencies.
-     */
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.TYPE)
-    @interface Dependencies {
-        /**
-         * An array of {@link Dependency} annotations.
-         *
-         * @return The declared dependencies.
-         */
-        @NotNull Dependency @NotNull [] value();
-    }
 }
