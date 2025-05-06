@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -51,15 +52,28 @@ final class Classes {
         // Classes from ClassLoader
         for (@NotNull ClassLoader classLoader : classLoaders) {
             @NotNull Set<File> files = new HashSet<>();
-            @NotNull Enumeration<URL> enumeration = classLoader.getResources("");
 
-            while (enumeration.hasMoreElements()) {
-                @NotNull URL url = enumeration.nextElement();
+            if (classLoader instanceof URLClassLoader) {
+                @NotNull URLClassLoader urlClassLoader = (URLClassLoader) classLoader;
 
-                try {
-                    files.add(new File(url.toURI()));
-                } catch (@NotNull URISyntaxException | @NotNull IllegalArgumentException e) {
-                    files.add(new File(url.getPath()));
+                for (@NotNull URL url : urlClassLoader.getURLs()) {
+                    try {
+                        files.add(new File(url.toURI()));
+                    } catch (@NotNull URISyntaxException | @NotNull IllegalArgumentException e) {
+                        files.add(new File(url.getPath()));
+                    }
+                }
+            } else {
+                @NotNull Enumeration<URL> enumeration = classLoader.getResources("");
+
+                while (enumeration.hasMoreElements()) {
+                    @NotNull URL url = enumeration.nextElement();
+
+                    try {
+                        files.add(new File(url.toURI()));
+                    } catch (@NotNull URISyntaxException | @NotNull IllegalArgumentException e) {
+                        files.add(new File(url.getPath()));
+                    }
                 }
             }
 
@@ -108,7 +122,7 @@ final class Classes {
         while (entries.hasMoreElements()) {
             @NotNull JarEntry entry = entries.nextElement();
 
-            if (entry.getName().endsWith(".class") && !entry.getName().toLowerCase().endsWith("module-info.class")) {
+            if (entry.getName().endsWith(".class") && !entry.getName().toLowerCase().endsWith("module-info.class") && !entry.getName().toLowerCase().endsWith("package-info.class")) {
                 @NotNull String name = entry.getName().replace("/", ".").replace(".class", "");
 
                 try (@NotNull InputStream stream = jar.getInputStream(entry)) {

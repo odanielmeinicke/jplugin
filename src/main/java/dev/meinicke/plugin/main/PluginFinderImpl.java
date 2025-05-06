@@ -599,6 +599,7 @@ final class PluginFinderImpl implements PluginFinder {
             public void accept(@NotNull ClassData data) {
                 // Variables
                 @NotNull String name = data.getName();
+
                 @NotNull ClassLoader classLoader = data.getClassLoader();
                 @NotNull InputStream inputStream = data.getInputStream();
 
