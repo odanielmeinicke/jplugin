@@ -3,6 +3,7 @@ package dev.meinicke.plugin.main;
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.exception.PluginInterruptException;
+import dev.meinicke.plugin.factory.InitializerFactory;
 import dev.meinicke.plugin.factory.PluginFactory;
 import dev.meinicke.plugin.factory.PluginFinder;
 import org.jetbrains.annotations.ApiStatus;
@@ -22,7 +23,8 @@ import java.io.IOException;
  * <p>
  * Key functionalities provided by this class include:
  * <ul>
- *   <li>Retrieving the current PluginFactory via {@link #getFactory()} and modifying it using {@link #setFactory(PluginFactory)}.</li>
+ *   <li>Retrieving the current PluginFactory via {@link #getPluginFactory()}.</li>
+ *   <li>Retrieving the current InitializerFactory via {@link #getInitializerFactory()}.</li>
  *   <li>Accessing plugin finders and categories through methods like {@link #find()}.</li>
  *   <li>Retrieving plugin metadata and instances using the {@link #retrieve(String)} and {@link #retrieve(Class)} methods.</li>
  *   <li>Performing plugin initialization and interruption using a variety of overloaded methods that accept
@@ -37,26 +39,31 @@ public final class Plugins {
     /**
      * The underlying PluginFactory instance used to manage plugin operations.
      */
-    private static @NotNull PluginFactory factory = new PluginFactoryImpl();
+    @SuppressWarnings("FieldMayBeFinal")
+    private static @NotNull PluginFactory pluginFactory = new PluginFactoryImpl();
+
+    /**
+     * The underlying InitializerFactory instance used to manage plugin initializations.
+     */
+    @SuppressWarnings("FieldMayBeFinal")
+    private static @NotNull InitializerFactory initializerFactory = new InitializerFactoryImpl();
 
     /**
      * Returns the current PluginFactory instance.
      *
      * @return The active PluginFactory.
      */
-    public static @NotNull PluginFactory getFactory() {
-        return factory;
+    public static @NotNull PluginFactory getPluginFactory() {
+        return pluginFactory;
     }
 
     /**
-     * Sets the PluginFactory instance to the provided factory.
-     * <p>
-     * This allows for customization of the plugin management behavior by replacing the default factory.
+     * Returns the current InitializerFactory instance.
      *
-     * @param factory The new PluginFactory to use. Must not be null.
+     * @return The active InitializerFactory.
      */
-    public static void setFactory(@NotNull PluginFactory factory) {
-        Plugins.factory = factory;
+    public static @NotNull InitializerFactory getInitializerFactory() {
+        return initializerFactory;
     }
 
     /**
@@ -65,7 +72,7 @@ public final class Plugins {
      * @return A PluginFinder instance from the current PluginFactory.
      */
     public static @NotNull PluginFinder find() {
-        return getFactory().find();
+        return getPluginFactory().find();
     }
 
     /**
@@ -75,7 +82,7 @@ public final class Plugins {
      * @return The PluginInfo for the given plugin name.
      */
     public static @NotNull PluginInfo retrieve(@NotNull String name) {
-        return getFactory().retrieve(name);
+        return getPluginFactory().retrieve(name);
     }
 
     /**
@@ -85,7 +92,7 @@ public final class Plugins {
      * @return The PluginInfo for the given plugin class.
      */
     public static @NotNull PluginInfo retrieve(@NotNull Class<?> reference) {
-        return getFactory().retrieve(reference);
+        return getPluginFactory().retrieve(reference);
     }
 
     /**
@@ -100,7 +107,7 @@ public final class Plugins {
      * @throws PluginInterruptException If an error occurs during the interruption process.
      */
     public static void interrupt(@NotNull ClassLoader loader, @NotNull String packge, boolean recursive) throws PluginInterruptException {
-        getFactory().interrupt(loader, packge, recursive);
+        getPluginFactory().interrupt(loader, packge, recursive);
     }
 
     /**
@@ -116,7 +123,7 @@ public final class Plugins {
      * @throws IOException               If an I/O error occurs during scanning or loading.
      */
     public static void initialize(@NotNull ClassLoader loader, @NotNull String packge, boolean recursive) throws PluginInitializeException, IOException {
-        getFactory().initialize(loader, packge, recursive);
+        getPluginFactory().initialize(loader, packge, recursive);
     }
 
     /**
@@ -127,7 +134,7 @@ public final class Plugins {
      * @throws PluginInterruptException If an error occurs during the interruption process.
      */
     public static void interrupt(@NotNull String packge, boolean recursive) throws PluginInterruptException {
-        getFactory().interrupt(packge, recursive);
+        getPluginFactory().interrupt(packge, recursive);
     }
 
     /**
@@ -139,7 +146,7 @@ public final class Plugins {
      * @throws IOException               If an I/O error occurs during scanning or loading.
      */
     public static void initialize(@NotNull String packge, boolean recursive) throws PluginInitializeException, IOException {
-        getFactory().initialize(packge, recursive);
+        getPluginFactory().initialize(packge, recursive);
     }
 
     /**
@@ -151,7 +158,7 @@ public final class Plugins {
      * @throws PluginInterruptException If an error occurs during the interruption process.
      */
     public static void interrupt(@NotNull ClassLoader loader, @NotNull Package packge, boolean recursive) throws PluginInterruptException {
-        getFactory().interrupt(loader, packge, recursive);
+        getPluginFactory().interrupt(loader, packge, recursive);
     }
 
     /**
@@ -164,7 +171,7 @@ public final class Plugins {
      * @throws IOException               If an I/O error occurs during scanning or loading.
      */
     public static void initialize(@NotNull ClassLoader loader, @NotNull Package packge, boolean recursive) throws PluginInitializeException, IOException {
-        getFactory().initialize(loader, packge, recursive);
+        getPluginFactory().initialize(loader, packge, recursive);
     }
 
     /**
@@ -175,7 +182,7 @@ public final class Plugins {
      * @throws PluginInterruptException If an error occurs during the interruption process.
      */
     public static void interrupt(@NotNull Package packge, boolean recursive) throws PluginInterruptException {
-        getFactory().interrupt(packge, recursive);
+        getPluginFactory().interrupt(packge, recursive);
     }
 
     /**
@@ -187,7 +194,7 @@ public final class Plugins {
      * @throws IOException               If an I/O error occurs during scanning or loading.
      */
     public static void initialize(@NotNull Package packge, boolean recursive) throws PluginInitializeException, IOException {
-        getFactory().initialize(packge, recursive);
+        getPluginFactory().initialize(packge, recursive);
     }
 
     /**
@@ -197,7 +204,7 @@ public final class Plugins {
      * @throws PluginInterruptException If an error occurs during the interruption process.
      */
     public static void interrupt(@NotNull ClassLoader loader) throws PluginInterruptException {
-        getFactory().interrupt(loader);
+        getPluginFactory().interrupt(loader);
     }
 
     /**
@@ -211,7 +218,7 @@ public final class Plugins {
      */
     @ApiStatus.Experimental
     public static void initialize(@NotNull ClassLoader loader) throws PluginInitializeException, IOException {
-        getFactory().initialize(loader);
+        getPluginFactory().initialize(loader);
     }
 
     /**
@@ -225,7 +232,7 @@ public final class Plugins {
      */
     @ApiStatus.Experimental
     public static void initializeAll() throws PluginInitializeException, IOException {
-        getFactory().initializeAll();
+        getPluginFactory().initializeAll();
     }
 
     /**
@@ -234,7 +241,7 @@ public final class Plugins {
      * @throws PluginInterruptException If an error occurs during the interruption process.
      */
     public static void interruptAll() throws PluginInterruptException {
-        getFactory().interruptAll();
+        getPluginFactory().interruptAll();
     }
 
     // Private constructor to prevent instantiation
