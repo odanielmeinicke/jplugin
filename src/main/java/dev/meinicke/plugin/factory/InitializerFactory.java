@@ -29,7 +29,7 @@ import java.util.Collection;
  *       (including built-in and user-provided custom initializers).</li>
  *   <li><b>Instantiation:</b> Reflectively construct initializer instances, honoring visibility
  *       and constructor requirements, then optionally cache them for reuse.</li>
- *   <li><b>Caching & Performance:</b> Maintain a per-type cache to avoid repeated reflective
+ *   <li><b>Caching and Performance:</b> Maintain a per-type cache to avoid repeated reflective
  *       instantiation overhead. Clearing the cache on {@link #close()} frees resources.</li>
  *   <li><b>Type Safety:</b> Provide type-safe access via {@link #getInitializer(Class)}, ensuring
  *       the returned object is an instance of the requested {@link PluginInitializer} subclass.</li>
@@ -46,7 +46,6 @@ import java.util.Collection;
  * inconsistent cache state. Synchronization or concurrent collections are recommended.
  *
  * <h3>Close Behavior</h3>
- * <p>
  * Invoking {@link #close()} on the factory performs these actions:
  * <ol>
  *   <li>Clears the internal cache of all {@link PluginInitializer} instances.</li>
@@ -56,7 +55,6 @@ import java.util.Collection;
  *       {@link IllegalStateException}.</li>
  * </ol>
  * This ensures that after shutdown, no stale initializers linger and resources are fully freed.
- * </p>
  *
  * @see PluginInitializer
  * @see java.io.Closeable

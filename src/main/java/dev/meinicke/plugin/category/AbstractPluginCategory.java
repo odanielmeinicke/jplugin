@@ -86,7 +86,7 @@ public abstract class AbstractPluginCategory implements PluginCategory, Closeabl
         // Modules
 
         private @NotNull Collection<PluginInfo> collect() {
-            return Plugins.getFactory().stream().filter(plugin -> plugin.getCategories().contains(AbstractPluginCategory.this)).collect(Collectors.toSet());
+            return Plugins.getPluginFactory().stream().filter(plugin -> plugin.getCategories().contains(AbstractPluginCategory.this)).collect(Collectors.toSet());
         }
 
         // Iterator and size

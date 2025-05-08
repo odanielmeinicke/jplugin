@@ -513,7 +513,7 @@ public abstract class PluginInfo {
         }
 
         // Global handlers
-        for (@NotNull PluginHandler handler : Plugins.getFactory().getGlobalHandlers()) {
+        for (@NotNull PluginHandler handler : Plugins.getPluginFactory().getGlobalHandlers()) {
             try {
                 consumer.accept(handler);
             } catch (@NotNull Throwable throwable) {
@@ -783,7 +783,7 @@ public abstract class PluginInfo {
             }
 
             // Global handlers
-            for (@NotNull PluginHandler handler : Plugins.getFactory().getGlobalHandlers()) {
+            for (@NotNull PluginHandler handler : Plugins.getPluginFactory().getGlobalHandlers()) {
                 try {
                     if (!handler.accept(PluginInfo.this)) {
                         return false;

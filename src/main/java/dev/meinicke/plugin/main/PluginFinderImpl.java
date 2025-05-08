@@ -1,17 +1,11 @@
 package dev.meinicke.plugin.main;
 
 import dev.meinicke.plugin.PluginInfo;
-import dev.meinicke.plugin.PluginInfo.Builder;
 import dev.meinicke.plugin.PluginInfo.State;
 import dev.meinicke.plugin.annotation.*;
 import dev.meinicke.plugin.category.PluginCategory;
-import dev.meinicke.plugin.context.PluginContext;
-import dev.meinicke.plugin.exception.InvalidPluginException;
 import dev.meinicke.plugin.exception.PluginInitializeException;
-import dev.meinicke.plugin.exception.PluginInterruptException;
-import dev.meinicke.plugin.factory.PluginFactory;
 import dev.meinicke.plugin.factory.PluginFinder;
-import dev.meinicke.plugin.factory.handlers.PluginHandler;
 import dev.meinicke.plugin.initializer.ConstructorPluginInitializer;
 import dev.meinicke.plugin.initializer.PluginInitializer;
 import dev.meinicke.plugin.metadata.Metadata;
@@ -19,15 +13,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
-import java.net.URL;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -37,12 +24,12 @@ final class PluginFinderImpl implements PluginFinder {
 
     private final @NotNull PluginFactoryImpl factory;
 
-    final @NotNull Set<ClassLoader> classLoaders = new HashSet<>();
-    final @NotNull Set<String> categories = new HashSet<>();
-    final @NotNull Set<Class<? extends PluginInitializer>> initializers = new HashSet<>();
-    final @NotNull Set<String> names = new HashSet<>();
-    final @NotNull Set<String> descriptions = new HashSet<>();
-    final @NotNull Set<Class<?>> dependencies = new HashSet<>();
+    private final @NotNull Set<ClassLoader> classLoaders = new HashSet<>();
+    private final @NotNull Set<String> categories = new HashSet<>();
+    private final @NotNull Set<Class<? extends PluginInitializer>> initializers = new HashSet<>();
+    private final @NotNull Set<String> names = new HashSet<>();
+    private final @NotNull Set<String> descriptions = new HashSet<>();
+    private final @NotNull Set<Class<?>> dependencies = new HashSet<>();
 
     private final @NotNull Map<String, Boolean> packages = new HashMap<>();
     private final @NotNull Set<Class<?>> dependants = new HashSet<>();
@@ -56,56 +43,45 @@ final class PluginFinderImpl implements PluginFinder {
 
     private volatile boolean shutdownHook = true;
 
+    private final @NotNull PluginLoader loader = new PluginLoader(this);
+
     public PluginFinderImpl(@NotNull PluginFactoryImpl factory) {
         this.factory = factory;
     }
 
     // Getters
 
-    public @NotNull Class<?> getCallerClass() {
-        // Retrieve caller class
-        @NotNull StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-        @Nullable Class<?> caller = null;
+    @Override
+    public @NotNull PluginFactoryImpl getFactory() {
+        return factory;
+    }
 
-        if (stackTrace.length > 1) {
-            int index = 0;
-            for (@NotNull StackTraceElement element : stackTrace) {
-                index++;
-                if (index == 1) continue; // Skip first
+    public @NotNull Set<ClassLoader> getClassLoaders() {
+        return classLoaders;
+    }
+    public @NotNull Set<String> getCategories() {
+        return categories;
+    }
+    public @NotNull Set<Class<? extends PluginInitializer>> getInitializers() {
+        return initializers;
+    }
 
-                // Skip jplugin classes
-                if (element.getClassName().startsWith("dev.meinicke.plugin")) {
-                    continue;
-                }
+    public @NotNull Set<String> getNames() {
+        return names;
+    }
+    public @NotNull Set<String> getDescriptions() {
+        return descriptions;
+    }
 
-                // Select first
-                try {
-                    caller = Class.forName(element.getClassName());
-                    break;
-                } catch (@NotNull ClassNotFoundException ignore1) {
-                    if (!classLoaders.isEmpty()) {
-                        for (@NotNull ClassLoader loader : classLoaders) try {
-                            caller = Class.forName(element.getClassName(), false, loader);
-                            break;
-                        } catch (@NotNull ClassNotFoundException ignore2) {
-                        }
-                    }
-                }
+    public @NotNull Set<Class<?>> getDependencies() {
+        return dependencies;
+    }
+    public @NotNull Map<String, Boolean> getPackages() {
+        return packages;
+    }
 
-                if (caller == null) {
-                    throw new RuntimeException("cannot retrieve caller class: " + element.getClassName());
-                }
-            }
-        } else {
-            throw new RuntimeException("invalid stack traces to retrieve caller class");
-        }
-
-        // Finish
-        if (caller == null) {
-            throw new IllegalStateException("cannot retrieve caller class");
-        } else {
-            return caller;
-        }
+    public boolean hasShutdownHook() {
+        return shutdownHook;
     }
 
     // Class Loaders
@@ -578,283 +554,32 @@ final class PluginFinderImpl implements PluginFinder {
         @NotNull Set<PluginInfo> plugins = new HashSet<>();
 
         // Detect plugins
-        for (@NotNull PluginInfo plugin : Plugins.getFactory()) {
+        for (@NotNull PluginInfo plugin : getFactory()) {
             if (matches(plugin)) {
                 plugins.add(plugin);
             }
         }
 
         // Finish
-        return organizePlugins(plugins).toArray(new PluginInfo[0]);
+        return PluginLoader.organizePlugins(plugins).toArray(new PluginInfo[0]);
     }
 
     @Override
     public @NotNull Class<?> @NotNull [] classes() throws IOException {
-        // Variables
-        @NotNull Set<@NotNull Class<?>> references = new HashSet<>();
-
-        // Consumer
-        @NotNull Consumer<ClassData> consumer = new Consumer<ClassData>() {
-            @Override
-            public void accept(@NotNull ClassData data) {
-                // Variables
-                @NotNull String name = data.getName();
-
-                @NotNull ClassLoader classLoader = data.getClassLoader();
-                @NotNull InputStream inputStream = data.getInputStream();
-
-                // Verify package
-                @NotNull String packge = name.contains(".") ? name.substring(0, name.lastIndexOf('.')) : "";
-                if (!checkPackageWithin(packge)) return;
-
-                // Load if it's a plugin
-                @Nullable Class<?> reference = data.loadIfPlugin(PluginFinderImpl.this);
-                if (reference != null) references.add(reference);
-            }
-        };
-
-        // Collect all references
-        if (classLoaders.isEmpty()) {
-            @NotNull Class<?> caller = getCallerClass();
-            @NotNull URL url = caller.getProtectionDomain().getCodeSource().getLocation();
-
-            Classes.getAllTypeClassesWithVisitor(url, caller.getClassLoader(), consumer);
-        } else {
-            Classes.getAllTypeClassesWithVisitor(classLoaders, consumer);
-        }
-
-        // Load references
-        return references.toArray(new Class[0]);
+        return loader.getClasses().toArray(new Class[0]);
     }
 
     // Load
 
     @Override
     public @NotNull PluginInfo @NotNull [] load(@NotNull Predicate<Class<?>> predicate) throws PluginInitializeException, IOException {
-        // Variables
-        @NotNull Map<Class<?>, Builder> builders = new LinkedHashMap<>();
-        @NotNull Map<Class<?>, PluginInfo> plugins = new LinkedHashMap<>();
-        @NotNull Map<Builder, Collection<PluginCategory>> categories = new HashMap<>();
-
-        // Create the builder instances
-        // This create the instance without checking for categories and dependencies.
-
-        main:
-        for (@NotNull Class<?> reference : classes()) {
-            // Verifications
-            {
-                // Check if predicate validates it
-                if (!predicate.test(reference)) {
-                    continue;
-                } else if (factory.plugins.containsKey(reference) && !factory.plugins.get(reference).getState().isIdle()) {
-                    continue;
-                }
-
-                // Check if it's an inner and non-class
-                if (reference.getEnclosingClass() != null && !Modifier.isStatic(reference.getModifiers())) {
-                    throw new InvalidPluginException(reference, "a non-static inner class cannot be a plugin, the class should be at least static");
-                }
-            }
-
-            // Retrieve plugin initializer
-            @NotNull PluginInitializer initializer = getInitializer(reference);
-
-            // Dependencies
-            @NotNull Set<Class<?>> dependencies = getDependencies(reference);
-
-            // Name
-            @Nullable String name = reference.getAnnotation(Plugin.class).name();
-            if (name.isEmpty()) name = null;
-
-            // Description
-            @Nullable String description = reference.getAnnotation(Plugin.class).description();
-            if (description.isEmpty()) description = null;
-
-            // Create instance
-            @NotNull Class<?> caller = getCallerClass();
-            @NotNull PluginContext context = new PluginContextImpl(reference, caller, this);
-            getMetadata().merge(context.getMetadata());
-
-            @NotNull Builder builder = initializer.create(reference, name, description, dependencies.toArray(new Class[0]), new String[0], context);
-
-            // Add to the builder only the categories that actually exists (for now)
-            categories.putIfAbsent(builder, new LinkedList<>());
-
-            for (@NotNull Category annotation : reference.getAnnotationsByType(Category.class)) {
-                @Nullable PluginCategory category = factory.getCategory(annotation.value(), false).orElse(null);
-
-                if (category != null) {
-                    // Add category to builder
-                    builder.category(category);
-                    categories.get(builder).add(category);
-
-                    // Category handlers
-                    if (callCategory(builder, category)) {
-                        continue main;
-                    }
-                }
-            }
-
-            // Register it
-            builders.put(reference, builder);
-        }
-
-        // Shutdown hook
-        @NotNull Set<PluginInfo> loadedPlugins = new LinkedHashSet<>();
-
-        if (shutdownHook) {
-            @NotNull ShutdownHook hook = new ShutdownHook(loadedPlugins);
-            Runtime.getRuntime().addShutdownHook(hook);
-        }
-
-        // Organize by dependencies order
-        @NotNull Iterator<Builder> iterator = organize(builders.values()).iterator();
-        @NotNull Set<Builder> done = new HashSet<>();
-        @NotNull Set<Builder> refreshed = new HashSet<>();
-
-        main:
-        while (iterator.hasNext()) {
-            // Variables
-            @NotNull Builder builder = iterator.next();
-            @NotNull Class<?> reference = builder.getReference();
-            categories.put(builder, new LinkedList<>());
-
-            // Dependencies
-            for (@NotNull Class<?> dependency : builder.getDependencies()) {
-                if (!builders.containsKey(dependency) && !factory.plugins.containsKey(dependency)) {
-                    if (dependency.isAnnotationPresent(Plugin.class)) {
-                        throw new InvalidPluginException(reference, "the plugin '" + reference.getName() + "' depends on '" + dependency.getName() + "' that isn't loaded.");
-                    } else {
-                        throw new InvalidPluginException(reference, "the plugin '" + reference.getName() + "' cannot have a dependency on '" + dependency.getName() + "' because it's not a plugin");
-                    }
-                }
-            }
-
-            if (!refreshed.contains(builder)) {
-                // Categories
-                for (@NotNull Category annotation : reference.getAnnotationsByType(Category.class)) {
-                    @Nullable PluginCategory category = factory.getCategory(annotation.value(), false).orElse(null);
-
-                    if (categories.get(builder).contains(category)) {
-                        continue;
-                    }
-
-                    if (category != null) {
-                        builder.category(category);
-                        categories.get(builder).add(category);
-
-                        // Category handlers
-                        if (callCategory(builder, category)) {
-                            continue main;
-                        }
-                    } else {
-                        builder.category(annotation.value());
-                    }
-                }
-
-                // Call global handlers
-                for (@NotNull PluginHandler handler : factory.getGlobalHandlers()) {
-                    if (!handler.accept(builder)) {
-                        continue main;
-                    }
-                }
-
-                refreshed.add(builder);
-
-                @NotNull Set<Builder> next = new LinkedHashSet<>(builders.values());
-                next.removeAll(done);
-
-                iterator = organize(next).iterator();
-
-                continue;
-            }
-
-            // Build
-            @NotNull PluginInfo plugin;
-
-            try {
-                plugin = builder.build();
-            } catch (@NotNull Throwable e) {
-                throw new PluginInitializeException(reference, "cannot build plugin info of class: " + reference.getName(), e);
-            }
-
-            // Call Handlers
-            {
-                // Category handlers
-                for (@NotNull PluginCategory category : categories.get(builder)) {
-                    // Category handlers
-                    if (callCategory(plugin, category)) {
-                        continue main;
-                    }
-                }
-
-                // Global handlers
-                for (@NotNull PluginHandler handler : factory.getGlobalHandlers()) {
-                    if (!handler.accept(plugin)) {
-                        continue main;
-                    }
-                }
-            }
-
-            // Register it
-            factory.plugins.put(reference, plugin);
-            plugins.put(reference, plugin);
-
-            // Refresh iterator
-            done.add(builder);
-
-            @NotNull Set<Builder> next = new LinkedHashSet<>(builders.values());
-            next.removeAll(done);
-
-            iterator = organize(next).iterator();
-        }
-
-        // Update contexts
-        for (@NotNull Class<?> reference : plugins.keySet()) {
-            @NotNull Builder builder = builders.get(reference);
-            @NotNull PluginInfo plugin = plugins.get(reference);
-
-            // Change context variables
-            @NotNull PluginContextImpl context = (PluginContextImpl) builder.getContext();
-            context.plugin = plugin;
-            context.plugins.addAll(plugins.values());
-        }
-
-        // Start plugins
-        for (@NotNull PluginInfo plugin : plugins.values()) {
-            try {
-                plugin.start();
-
-                if (plugin.isAutoClose()) {
-                    loadedPlugins.add(plugin);
-                }
-            } catch (@NotNull PluginInitializeException e) {
-                throw e;
-            } catch (@NotNull Throwable throwable) {
-                throw new PluginInitializeException(plugin.getReference(), "cannot initialize plugin correctly", throwable);
-            }
-        }
-
-        // Add dependencies
-        for (@NotNull PluginInfo plugin : plugins.values()) {
-            @NotNull List<@NotNull PluginInfo> dependants = plugins.values().stream().filter(target -> target.getDependencies().contains(plugin)).collect(Collectors.toList());
-            plugin.getDependants().addAll(dependants);
-        }
-
-        // Finish
-        return plugins.values().toArray(new PluginInfo[0]);
+        return loader.plugins(predicate).toArray(new PluginInfo[0]);
     }
-
-    @Override
-    public @NotNull PluginFactory getFactory() {
-        return factory;
-    }
-
 
     // Utilities
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    private boolean checkPackageWithin(@NotNull String reference) {
+    public boolean checkPackageWithin(@NotNull String reference) {
         if (packages.isEmpty()) {
             return true;
         }
@@ -877,216 +602,6 @@ final class PluginFinderImpl implements PluginFinder {
         }
 
         return any;
-    }
-
-    private static @NotNull Set<PluginInfo> organizePlugins(@NotNull Set<PluginInfo> plugins) {
-        @NotNull Map<Class<?>, PluginInfo> map = plugins.stream().collect(Collectors.toMap(PluginInfo::getReference, Function.identity()));
-        @NotNull Set<Class<?>> sortedReferences = organize(map.keySet());
-
-        @NotNull Set<PluginInfo> sorted = new LinkedHashSet<>();
-        for (@NotNull Class<?> reference : sortedReferences) {
-            PluginInfo info = map.get(reference);
-            if (info == null) {
-                throw new IllegalStateException("Missing PluginInfo for reference: " + reference);
-            }
-            sorted.add(info);
-        }
-
-        return sorted;
-    }
-    private static @NotNull Set<Class<?>> organize(@NotNull Set<Class<?>> references) {
-        @NotNull Set<Class<?>> sorted = new LinkedHashSet<>();
-        @NotNull List<Class<?>> remaining = new ArrayList<>(references);
-
-        boolean progress;
-        do {
-            progress = false;
-            @NotNull Iterator<Class<?>> iterator = remaining.iterator();
-
-            while (iterator.hasNext()) {
-                @NotNull Class<?> reference = iterator.next();
-                @NotNull Collection<Class<?>> dependencies = Arrays.stream(reference.getAnnotationsByType(Dependency.class)).map(Dependency::type).collect(Collectors.toList());
-
-                if (dependencies.isEmpty() || sorted.containsAll(dependencies)) {
-                    sorted.add(reference);
-                    iterator.remove();
-                    progress = true;
-                }
-            }
-        } while (progress);
-
-        if (!remaining.isEmpty()) {
-            throw new IllegalStateException("cyclic or unresolved dependencies detected: " + remaining);
-        }
-
-        return sorted;
-    }
-    private static @NotNull Set<Builder> organize(@NotNull Collection<@NotNull Builder> plugins) {
-        @NotNull Set<Builder> sorted = new LinkedHashSet<>();
-        @NotNull List<Builder> remaining = new LinkedList<>(plugins);
-        @NotNull Map<Class<?>, Builder> builderByReference = plugins.stream()
-                .collect(Collectors.toMap(Builder::getReference, Function.identity()));
-
-        while (!remaining.isEmpty()) {
-            @NotNull List<Builder> eligible = new LinkedList<>();
-
-            for (@NotNull Builder builder : remaining) {
-                boolean ready = true;
-                for (@NotNull Class<?> dependency : builder.getDependencies()) {
-                    @NotNull Builder dependencyBuilder = builderByReference.get(dependency);
-                    if (dependencyBuilder != null && !sorted.contains(dependencyBuilder)) {
-                        ready = false;
-                        break;
-                    }
-                }
-                if (ready) {
-                    eligible.add(builder);
-                }
-            }
-
-            if (eligible.isEmpty()) {
-                throw new IllegalStateException("cyclic or unresolved dependencies detected: " + remaining);
-            }
-
-            eligible.sort(Comparator.comparingInt(Builder::getPriority));
-
-            @NotNull Builder chosen = eligible.get(0);
-            sorted.add(chosen);
-            remaining.remove(chosen);
-        }
-
-        return sorted;
-    }
-
-    private static @NotNull PluginInitializer getInitializer(@NotNull Class<?> reference) {
-        // Plugin loader class
-        @NotNull Class<? extends PluginInitializer> loaderClass = ConstructorPluginInitializer.class;
-        if (reference.isAnnotationPresent(Initializer.class)) {
-            loaderClass = reference.getAnnotation(Initializer.class).type();
-        }
-
-        try {
-            // Constructor
-            @NotNull Constructor<? extends PluginInitializer> constructor = loaderClass.getDeclaredConstructor();
-            constructor.setAccessible(true);
-
-            return constructor.newInstance();
-        } catch (@NotNull InvocationTargetException e) {
-            throw new RuntimeException("cannot execute plugin loader's constructor: " + loaderClass, e);
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException("cannot find plugin loader's empty declared constructor: " + loaderClass, e);
-        } catch (InstantiationException e) {
-            throw new RuntimeException("cannot instantiate plugin loader: " + loaderClass, e);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException("cannot access plugin loader's constructor: " + loaderClass, e);
-        }
-    }
-    private static @NotNull Set<Class<?>> getDependencies(@NotNull Class<?> reference) {
-        @NotNull Set<Class<?>> dependencies = new LinkedHashSet<>();
-
-        for (@NotNull Dependency annotation : reference.getAnnotationsByType(Dependency.class)) {
-            // Check issues
-            if (annotation.type() == reference) {
-                throw new InvalidPluginException(reference, "the plugin cannot have a dependency on itself");
-            } else for (@NotNull Dependency a : annotation.type().getAnnotationsByType(Dependency.class)) {
-                @NotNull Class<?> dependency = a.type();
-
-                if (dependency == reference) {
-                    throw new InvalidPluginException(reference, "cyclic dependency between '" + reference.getName() + "' and '" + dependency.getName() + "'.");
-                }
-            }
-
-            // Variables
-            @NotNull Class<?> dependency = annotation.type();
-
-            // Generate instance and register it
-            dependencies.add(dependency);
-        }
-
-        // Finish
-        return dependencies;
-    }
-
-    private static boolean callCategory(@NotNull Builder builder, @NotNull PluginCategory category) {
-        if (!category.accept(builder)) {
-            return true;
-        }
-
-        // Handlers
-        for (@NotNull PluginHandler handler : category.getHandlers()) {
-            try {
-                if (!handler.accept(builder)) {
-                    return true;
-                }
-            } catch (@NotNull Throwable throwable) {
-                throw new RuntimeException("cannot invoke category's handler to accept '" + category + "': " + handler);
-            }
-        }
-
-        // Finish
-        return false;
-    }
-    private static boolean callCategory(@NotNull PluginInfo plugin, @NotNull PluginCategory category) {
-        if (!category.accept(plugin)) {
-            return true;
-        }
-
-        // Handlers
-        for (@NotNull PluginHandler handler : category.getHandlers()) {
-            try {
-                if (!handler.accept(plugin)) {
-                    return true;
-                }
-            } catch (@NotNull Throwable throwable) {
-                throw new RuntimeException("cannot invoke category's handler to accept '" + category + "': " + handler);
-            }
-        }
-
-        // Finish
-        return false;
-    }
-
-    // Classes
-
-    private static final class ShutdownHook extends Thread {
-
-        // Object
-
-        private final @NotNull Collection<PluginInfo> plugins;
-
-        public ShutdownHook(@NotNull Collection<PluginInfo> plugins) {
-            super("Plug-ins Shutdown Hook");
-            this.plugins = plugins;
-        }
-
-        // Getters
-
-        private @NotNull Collection<PluginInfo> getPlugins() {
-            return plugins;
-        }
-
-        // Modules
-
-        @Override
-        public void run() {
-            @NotNull List<PluginInfo> plugins = new LinkedList<>(getPlugins());
-            Collections.reverse(plugins);
-
-            // Loop
-            for (@NotNull PluginInfo info : plugins) {
-                if (!info.isAutoClose()) {
-                    continue;
-                } else if (info.getState() != PluginInfo.State.RUNNING) {
-                    continue;
-                }
-
-                try {
-                    info.close();
-                } catch (@NotNull PluginInterruptException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
     }
 
 }

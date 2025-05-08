@@ -218,7 +218,7 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
 
         @Override
         public @NotNull PluginInfo build() {
-            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getFactory().getCategory(category)).toArray(PluginCategory[]::new), getContext(), getPriority());
+            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getPluginFactory().getCategory(category)).toArray(PluginCategory[]::new), getContext(), getPriority());
             info.getCategories().addAll(registeredCategories);
 
             return info;

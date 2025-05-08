@@ -49,7 +49,7 @@ final class ClassData implements Closeable {
         try {
             @NotNull Class<?> reference = Class.forName(name, false, classLoader);
 
-            if (reference.isAnnotationPresent(Plugin.class) && (finder.classLoaders.isEmpty() || finder.classLoaders.contains(reference.getClassLoader()))) {
+            if (reference.isAnnotationPresent(Plugin.class) && (finder.getClassLoaders().isEmpty() || finder.getClassLoaders().contains(reference.getClassLoader()))) {
                 return reference;
             }
         } catch (@NotNull ClassNotFoundException | @NotNull NoClassDefFoundError e) {
@@ -80,22 +80,22 @@ final class ClassData implements Closeable {
                                 @Override
                                 public void visit(String name, Object value) {
                                     if (isPlugin) {
-                                        if (!finder.names.isEmpty() && name.equals("name") && !finder.names.contains(value.toString())) {
+                                        if (!finder.getNames().isEmpty() && name.equals("name") && !finder.getNames().contains(value.toString())) {
                                             valid.set(false);
-                                        } else if (!finder.descriptions.isEmpty() && name.equals("description") && !finder.descriptions.contains(value.toString())) {
+                                        } else if (!finder.getDescriptions().isEmpty() && name.equals("description") && !finder.getDescriptions().contains(value.toString())) {
                                             valid.set(false);
                                         }
                                     } else if (descriptor.contains(Category.class.getName().replace('.', '/'))) {
-                                        if (!finder.categories.isEmpty() && name.equals("name") && finder.categories.stream().noneMatch(category -> category.equalsIgnoreCase(value.toString()))) {
+                                        if (!finder.getCategories().isEmpty() && name.equals("name") && finder.getCategories().stream().noneMatch(category -> category.equalsIgnoreCase(value.toString()))) {
                                             valid.set(false);
                                         }
                                     } else if (descriptor.contains(Initializer.class.getName().replace('.', '/'))) {
                                         //noinspection unchecked
-                                        if (!finder.initializers.isEmpty() && name.equals("type") && !finder.initializers.contains((Class<? extends PluginInitializer>) value)) {
+                                        if (!finder.getInitializers().isEmpty() && name.equals("type") && !finder.getInitializers().contains((Class<? extends PluginInitializer>) value)) {
                                             valid.set(false);
                                         }
                                     } else if (descriptor.contains(Dependency.class.getName().replace('.', '/'))) {
-                                        if (!finder.dependencies.isEmpty() && name.equals("type") && !finder.dependencies.contains((Class<?>) value)) {
+                                        if (!finder.getDependencies().isEmpty() && name.equals("type") && !finder.getDependencies().contains((Class<?>) value)) {
                                             valid.set(false);
                                         }
                                     }
