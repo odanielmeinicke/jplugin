@@ -232,7 +232,7 @@ final class PluginLoader {
         // Finish
         return builders;
     }
-    public @NotNull Collection<PluginInfo> plugins(@NotNull Predicate<Class<?>> predicate) throws PluginInitializeException, IOException {
+    public @NotNull Collection<PluginInfo> load(@NotNull Predicate<Class<?>> predicate) throws PluginInitializeException, IOException {
         // Retrieve builders
         @NotNull Map<Builder, Collection<PluginCategory>> handledCategories = new HashMap<>();
         @NotNull Map<Builder, Collection<PluginCategory>> categories = new HashMap<>();

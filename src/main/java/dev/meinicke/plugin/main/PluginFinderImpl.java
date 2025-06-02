@@ -573,7 +573,7 @@ final class PluginFinderImpl implements PluginFinder {
 
     @Override
     public @NotNull PluginInfo @NotNull [] load(@NotNull Predicate<Class<?>> predicate) throws PluginInitializeException, IOException {
-        return loader.plugins(predicate).toArray(new PluginInfo[0]);
+        return loader.load(predicate).toArray(new PluginInfo[0]);
     }
 
     // Utilities
