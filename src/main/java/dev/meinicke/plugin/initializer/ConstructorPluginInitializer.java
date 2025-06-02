@@ -1,11 +1,13 @@
 package dev.meinicke.plugin.initializer;
 
+import dev.meinicke.plugin.Builder;
 import dev.meinicke.plugin.PluginInfo;
-import dev.meinicke.plugin.PluginInfo.Builder;
 import dev.meinicke.plugin.category.PluginCategory;
 import dev.meinicke.plugin.context.PluginContext;
+import dev.meinicke.plugin.exception.InvalidPluginException;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.exception.PluginInterruptException;
+import dev.meinicke.plugin.factory.PluginFactory;
 import dev.meinicke.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -14,6 +16,9 @@ import java.io.Closeable;
 import java.io.Flushable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Objects;
 
 /**
@@ -63,21 +68,22 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
 
     // Modules
 
-    /**
-     * Creates a new {@link Builder} that encapsulates the plugin's metadata and lifecycle logic.
-     * This builder is tied to plugins that support context-aware or no-argument constructor initialization.
-     *
-     * @param reference    The plugin class. It must declare either a constructor with {@link PluginContext} or a no-arg constructor.
-     * @param name         The plugin name. Can be {@code null} if not explicitly defined.
-     * @param description  A user-friendly description of the plugin. Can be {@code null}.
-     * @param dependencies An array of plugin class references representing required plugin dependencies.
-     * @param categories   A list of category tags used to classify this plugin.
-     * @param context      The active plugin execution context to be injected during instantiation.
-     * @return A {@link Builder} responsible for constructing the plugin's runtime metadata and instance handler.
-     */
     @Override
-    public @NotNull Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
-        return new BuilderImpl(reference, name, description, dependencies, categories, context);
+    public @NotNull PluginInfo build(@NotNull Builder builder) throws InvalidPluginException {
+        // Variables
+        @NotNull PluginFactory factory = builder.getFactory();
+
+        // Categories
+        @NotNull Collection<PluginCategory> categories = new HashSet<>();
+        for (@NotNull String name : builder.getCategories()) {
+            categories.add(factory.getCategory(name, true).orElseThrow(() -> new NullPointerException("cannot generate plugin category: " + name)));
+        }
+
+        // Dependencies
+        @NotNull PluginInfo[] dependencies = Arrays.stream(builder.getDependencies()).map(Plugins::retrieve).toArray(PluginInfo[]::new);
+
+        // Finish
+        return new PluginInfoImpl(builder.getReference(), builder.getName(), builder.getDescription(), dependencies, categories.toArray(new PluginCategory[0]), builder.getContext(), builder.getPriority());
     }
 
     // Implementations
@@ -174,6 +180,7 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                 throw new RuntimeException("cannot invoke 'running' handlers " + getReference().getName(), throwable);
             }
         }
+
         @Override
         public void close() throws PluginInterruptException {
             if (!getState().isRunning()) {
@@ -205,25 +212,6 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                 instance = null;
             }
         }
-    }
-    private static final class BuilderImpl extends AbstractPluginBuilder {
-
-        // Object
-
-        private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
-            super(reference, context, name, description, dependencies, categories);
-        }
-
-        // Modules
-
-        @Override
-        public @NotNull PluginInfo build() {
-            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getPluginFactory().getCategory(category)).toArray(PluginCategory[]::new), getContext(), getPriority());
-            info.getCategories().addAll(registeredCategories);
-
-            return info;
-        }
-
     }
 
 }

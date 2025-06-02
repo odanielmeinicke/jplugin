@@ -1,12 +1,15 @@
 package dev.meinicke.plugin.initializer;
 
+import dev.meinicke.plugin.Builder;
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.attribute.AttributeHolder;
 import dev.meinicke.plugin.category.PluginCategory;
 import dev.meinicke.plugin.context.PluginContext;
 import dev.meinicke.plugin.exception.IllegalAttributeTypeException;
+import dev.meinicke.plugin.exception.InvalidPluginException;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.exception.PluginInterruptException;
+import dev.meinicke.plugin.factory.PluginFactory;
 import dev.meinicke.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -16,6 +19,9 @@ import java.io.Flushable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Objects;
 
 /**
@@ -133,22 +139,22 @@ public final class MethodPluginInitializer implements PluginInitializer {
 
     // Modules
 
-    /**
-     * Creates a {@link PluginInfo} instance for the provided plugin class by instantiating an internal
-     * {@link PluginInfoImpl} that encapsulates the plugin's metadata and lifecycle management logic.
-     *
-     * @param reference    The plugin class annotated with {@code @Plugin}.
-     * @param name         The name of the plugin, which may be null if not explicitly specified.
-     * @param description  A textual description of the plugin's functionality, which may be null.
-     * @param dependencies An array of {@link PluginInfo} objects representing the dependencies required by the plugin.
-     * @param categories   An array of category tags that classify the plugin.
-     * @param context      The context associated with the plugin.
-     * @return A fully constructed {@link PluginInfo} instance that manages the initialization and shutdown
-     *         of the plugin.
-     */
     @Override
-    public @NotNull PluginInfo.Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
-        return new BuilderImpl(reference, name, description, dependencies, categories, context);
+    public @NotNull PluginInfo build(@NotNull Builder builder) throws InvalidPluginException {
+        // Variables
+        @NotNull PluginFactory factory = builder.getFactory();
+
+        // Categories
+        @NotNull Collection<PluginCategory> categories = new HashSet<>();
+        for (@NotNull String name : builder.getCategories()) {
+            categories.add(factory.getCategory(name, true).orElseThrow(() -> new NullPointerException("cannot generate plugin category: " + name)));
+        }
+
+        // Dependencies
+        @NotNull PluginInfo[] dependencies = Arrays.stream(builder.getDependencies()).map(Plugins::retrieve).toArray(PluginInfo[]::new);
+
+        // Finish
+        return new PluginInfoImpl(builder.getReference(), builder.getName(), builder.getDescription(), dependencies, categories.toArray(new PluginCategory[0]), builder.getContext(), builder.getPriority());
     }
 
     // Implementations
@@ -371,25 +377,6 @@ public final class MethodPluginInitializer implements PluginInitializer {
                 instance = null;
             }
         }
-    }
-    private static final class BuilderImpl extends AbstractPluginBuilder {
-
-        // Object
-
-        private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
-            super(reference, context, name, description, dependencies, categories);
-        }
-
-        // Modules
-
-        @Override
-        public @NotNull PluginInfo build() {
-            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getPluginFactory().getCategory(category)).toArray(PluginCategory[]::new), getContext(), getPriority());
-            info.getCategories().addAll(registeredCategories);
-
-            return info;
-        }
-
     }
 
 }

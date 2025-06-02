@@ -1,14 +1,20 @@
 package dev.meinicke.plugin.initializer;
 
+import dev.meinicke.plugin.Builder;
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.category.PluginCategory;
 import dev.meinicke.plugin.context.PluginContext;
+import dev.meinicke.plugin.exception.InvalidPluginException;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.exception.PluginInterruptException;
+import dev.meinicke.plugin.factory.PluginFactory;
 import dev.meinicke.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Objects;
 
 /**
@@ -69,8 +75,21 @@ public final class StaticPluginInitializer implements PluginInitializer {
     // Modules
 
     @Override
-    public @NotNull PluginInfo.Builder create(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
-        return new BuilderImpl(reference, name, description, dependencies, categories, context);
+    public @NotNull PluginInfo build(@NotNull Builder builder) throws InvalidPluginException {
+        // Variables
+        @NotNull PluginFactory factory = builder.getFactory();
+
+        // Categories
+        @NotNull Collection<PluginCategory> categories = new HashSet<>();
+        for (@NotNull String name : builder.getCategories()) {
+            categories.add(factory.getCategory(name, true).orElseThrow(() -> new NullPointerException("cannot generate plugin category: " + name)));
+        }
+
+        // Dependencies
+        @NotNull PluginInfo[] dependencies = Arrays.stream(builder.getDependencies()).map(Plugins::retrieve).toArray(PluginInfo[]::new);
+
+        // Finish
+        return new PluginInfoImpl(builder.getReference(), builder.getName(), builder.getDescription(), dependencies, categories.toArray(new PluginCategory[0]), builder.getContext(), builder.getPriority());
     }
 
     // Implementations
@@ -115,25 +134,6 @@ public final class StaticPluginInitializer implements PluginInitializer {
                 setState(State.IDLE);
                 instance = null;
             }
-        }
-
-    }
-    private static final class BuilderImpl extends AbstractPluginBuilder {
-
-        // Object
-
-        private BuilderImpl(@NotNull Class<?> reference, @Nullable String name, @Nullable String description, @NotNull Class<?> @NotNull [] dependencies, @NotNull String @NotNull [] categories, @NotNull PluginContext context) {
-            super(reference, context, name, description, dependencies, categories);
-        }
-
-        // Modules
-
-        @Override
-        public @NotNull PluginInfo build() {
-            @NotNull PluginInfo info = new PluginInfoImpl(getReference(), getName(), getDescription(), dependencies.stream().map(Plugins::retrieve).toArray(PluginInfo[]::new), unregisteredCategories.stream().map(category -> Plugins.getPluginFactory().getCategory(category)).toArray(PluginCategory[]::new), getContext(), getPriority());
-            info.getCategories().addAll(registeredCategories);
-
-            return info;
         }
 
     }
