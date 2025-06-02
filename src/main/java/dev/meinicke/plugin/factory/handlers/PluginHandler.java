@@ -1,5 +1,6 @@
 package dev.meinicke.plugin.factory.handlers;
 
+import dev.meinicke.plugin.Builder;
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.exception.PluginInterruptException;
@@ -21,7 +22,7 @@ public interface PluginHandler {
      * Invoked when a plugin is about to be created.
      * <p>
      * This callback allows a PluginHandler to inspect and potentially modify the builder that holds the
-     * plugin's metadata and configuration details. The builder, represented by {@link PluginInfo.Builder},
+     * plugin's metadata and configuration details. The builder, represented by {@link Builder},
      * encapsulates important properties such as the plugin's name, description, class reference, dependencies,
      * initializer type, and other configurable options. Using this information, the handler can determine whether
      * the plugin should be accepted (i.e., registered and subsequently started) or rejected.
@@ -30,12 +31,12 @@ public interface PluginHandler {
      * through the lifecycle, whereas {@code false} will prevent the plugin from being registered and started.
      * This mechanism provides a hook for custom validations, logging, or preprocessing actions before the plugin is fully constructed.
      *
-     * @param builder the {@link PluginInfo.Builder} instance containing the metadata and state information
+     * @param builder the {@link Builder} instance containing the metadata and state information
      *                required to construct the PluginInfo object for the plugin.
      * @return {@code true} to accept and register the plugin; {@code false} to reject it.
      */
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    default boolean accept(@NotNull PluginInfo.Builder builder) {
+    default boolean accept(@NotNull Builder builder) {
         return true;
     }
 
@@ -45,13 +46,13 @@ public interface PluginHandler {
      * This callback is intended for situations where changes are made to a PluginInfo that has already been
      * created and registered, such as when adding or removing categories (e.g., using
      * {@code pluginInfo.getCategories().add(category)}). Unlike the builder-based
-     * {@link #accept(PluginInfo.Builder)} method—which is invoked during the initial creation of the plugin—
+     * {@link #accept(Builder)} method—which is invoked during the initial creation of the plugin—
      * this method is triggered to evaluate and approve dynamic alterations to the plugin's configuration at runtime.
      * <p>
      * It is important to note that once a PluginInfo is created (after successfully passing the builder-based
      * accept method), it will also be subjected to this accept method. In other words, the creation process
      * of a plugin involves two stages of validation: first, the PluginInfo.Builder is validated via
-     * {@link #accept(PluginInfo.Builder)}, and if accepted, the resulting PluginInfo instance is then validated
+     * {@link #accept(Builder)}, and if accepted, the resulting PluginInfo instance is then validated
      * through this method. Furthermore, any subsequent dynamic modifications to an existing PluginInfo will also
      * pass through this callback to ensure that all changes meet the handler's criteria.
      * <p>

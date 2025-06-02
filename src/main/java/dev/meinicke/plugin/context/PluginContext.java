@@ -1,5 +1,6 @@
 package dev.meinicke.plugin.context;
 
+import dev.meinicke.plugin.Builder;
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.attribute.Attributes;
 import dev.meinicke.plugin.factory.PluginFinder;
@@ -60,7 +61,7 @@ public interface PluginContext {
      * </ul>
      *
      * <p>
-     * Note that this class is guaranteed to be the same one provided to the {@link PluginInitializer#create}
+     * Note that this class is guaranteed to be the same one provided to the {@link PluginInitializer#build(Builder)}
      * method and is not yet instantiated unless the initializer explicitly does so.
      * </p>
      *

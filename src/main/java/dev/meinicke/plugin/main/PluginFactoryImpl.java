@@ -1,7 +1,7 @@
 package dev.meinicke.plugin.main;
 
+import dev.meinicke.plugin.Builder;
 import dev.meinicke.plugin.PluginInfo;
-import dev.meinicke.plugin.PluginInfo.Builder;
 import dev.meinicke.plugin.annotation.Plugin;
 import dev.meinicke.plugin.category.AbstractPluginCategory;
 import dev.meinicke.plugin.category.PluginCategory;

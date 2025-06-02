@@ -3,6 +3,7 @@ package dev.meinicke.plugin.category.jlogm;
 import com.jlogm.Filter;
 import com.jlogm.Logger;
 import com.jlogm.factory.LoggerFactory;
+import dev.meinicke.plugin.Builder;
 import dev.meinicke.plugin.PluginInfo;
 import dev.meinicke.plugin.category.AbstractPluginCategory;
 import org.jetbrains.annotations.NotNull;
@@ -22,7 +23,7 @@ final class FilterPluginCategory extends AbstractPluginCategory {
 
     // Modules
 
-    public boolean accept(@NotNull PluginInfo.Builder builder) {
+    public boolean accept(@NotNull Builder builder) {
         builder.priority(-9);
         return true;
     }
