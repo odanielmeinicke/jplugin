@@ -363,6 +363,7 @@ final class Authentication extends Page {
 ```
 
 ```java
+import dev.meinicke.plugin.Builder;
 import dev.meinicke.plugin.factory.handlers.PluginHandler;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.PluginInfo;
@@ -370,45 +371,46 @@ import dev.meinicke.plugin.main.Plugins;
 import org.jetbrains.annotations.NotNull;
 
 public static void main(String[] args) {
-   // Create 'HTTP Page' category and add a plug-in handler to it
-   Plugins.getCategory("HTTP Page").getHandlers().add(new HTTPPageHandler());
+    // Create 'HTTP Page' category and add a plug-in handler to it
+    Plugins.getCategory("HTTP Page").getHandlers().add(new HTTPPageHandler());
 
-   // Initialize all plug-ins at the "my.website.pages" package, recursively.
-   Plugins.find().addPackage("my.website.pages", true).load();
+    // Initialize all plug-ins at the "my.website.pages" package, recursively.
+    Plugins.find().addPackage("my.website.pages", true).load();
 
-   // Plugins.find().addPackage("my.website.pages", true).load((c) -> c.getSuperclass() == Page.class); // Load only plug-ins that extends Page, to avoid issues.
+    // Plugins.find().addPackage("my.website.pages", true).load((c) -> c.getSuperclass() == Page.class); // Load only plug-ins that extends Page, to avoid issues.
 }
 
 // Classes
 
 private static final class HTTPPageHandler implements PluginHandler {
-   @Override
-   public boolean accept(@NotNull PluginInfo.Builder builder) {
-       return checkReference(builder.getReference());
-   }
-   @Override // Take a read at the javadocs to know the difference between those two methods!
-   public boolean accept(@NotNull PluginInfo info) {
-       return checkReference(info.getReference());
-   }
-   
-   public boolean checkReference(@NotNull Class<?> reference) {
-      // Check if the class extends Page
-      // If a class with the 'HTTP Page' category but that doesn't extends the Page class
-      // Tries to load, this method will be called. And if returned false, the loading will be interrupted.
-      boolean allow = info.getReference().getSuperclass() == Page.class;
-      if (!allow) {
-         System.out.println("The class " + builder.getReference().getName() + " is trying to load as HTTP Page but doesn't extends Page!");
-      }
-      
-      return allow;
-   }
+    @Override
+    public boolean accept(@NotNull Builder builder) {
+        return checkReference(builder.getReference());
+    }
 
-   @Override
-   public void start(@NotNull PluginInfo info) throws PluginInitializeException {
-      // When the plug-in starts, it adds the Page instance to the HTTP Environment to start
-      // receiving connections as a valid http page
-      HTTPEnvironment.getPages().add((Page) info.getInstance());
-   }
+    @Override // Take a read at the javadocs to know the difference between those two methods!
+    public boolean accept(@NotNull PluginInfo info) {
+        return checkReference(info.getReference());
+    }
+
+    public boolean checkReference(@NotNull Class<?> reference) {
+        // Check if the class extends Page
+        // If a class with the 'HTTP Page' category but that doesn't extends the Page class
+        // Tries to load, this method will be called. And if returned false, the loading will be interrupted.
+        boolean allow = info.getReference().getSuperclass() == Page.class;
+        if (!allow) {
+            System.out.println("The class " + builder.getReference().getName() + " is trying to load as HTTP Page but doesn't extends Page!");
+        }
+
+        return allow;
+    }
+
+    @Override
+    public void start(@NotNull PluginInfo info) throws PluginInitializeException {
+        // When the plug-in starts, it adds the Page instance to the HTTP Environment to start
+        // receiving connections as a valid http page
+        HTTPEnvironment.getPages().add((Page) info.getInstance());
+    }
 }
 
 ```
