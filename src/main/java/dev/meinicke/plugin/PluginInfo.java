@@ -490,7 +490,7 @@ public abstract class PluginInfo {
         for (@NotNull PluginHandler handler : getHandlers()) {
             try {
                 consumer.accept(handler);
-            } catch (@NotNull Throwable throwable) {
+            } catch (Throwable throwable) {
                 throw new RuntimeException("cannot invoke plugin's handler to " + action + " '" + this + "': " + handler, throwable);
             }
         }
@@ -499,14 +499,14 @@ public abstract class PluginInfo {
         for (@NotNull PluginCategory category : getCategories()) {
             try {
                 consumer.accept(category);
-            } catch (@NotNull Throwable throwable) {
+            } catch (Throwable throwable) {
                 throw new RuntimeException("cannot invoke category main handler to " + action + " '" + this + "': " + category, throwable);
             }
 
             for (@NotNull PluginHandler handler : category.getHandlers()) {
                 try {
                     consumer.accept(handler);
-                } catch (@NotNull Throwable throwable) {
+                } catch (Throwable throwable) {
                     throw new RuntimeException("cannot invoke category's handler list to " + action + " '" + this + "': " + handler, throwable);
                 }
             }
@@ -516,7 +516,7 @@ public abstract class PluginInfo {
         for (@NotNull PluginHandler handler : Plugins.getPluginFactory().getGlobalHandlers()) {
             try {
                 consumer.accept(handler);
-            } catch (@NotNull Throwable throwable) {
+            } catch (Throwable throwable) {
                 throw new RuntimeException("cannot invoke global list's handler to " + action + " '" + this + "': " + handler, throwable);
             }
         }
@@ -558,7 +558,7 @@ public abstract class PluginInfo {
                     if (!handler.accept(PluginInfo.this)) {
                         return false;
                     }
-                } catch (@NotNull Throwable throwable) {
+                } catch (Throwable throwable) {
                     throw new RuntimeException("cannot invoke plugin's handler to add plugin '" + this + "': " + handler, throwable);
                 }
             }
@@ -568,7 +568,7 @@ public abstract class PluginInfo {
                 if (!category.accept(PluginInfo.this)) {
                     return false;
                 }
-            } catch (@NotNull Throwable throwable) {
+            } catch (Throwable throwable) {
                 throw new RuntimeException("cannot invoke category main handler to add plugin '" + this + "': " + category, throwable);
             }
 
@@ -577,7 +577,7 @@ public abstract class PluginInfo {
                     if (!handler.accept(PluginInfo.this)) {
                         return false;
                     }
-                } catch (@NotNull Throwable throwable) {
+                } catch (Throwable throwable) {
                     throw new RuntimeException("cannot invoke category's handler list to add plugin '" + this + "': " + handler, throwable);
                 }
             }
@@ -588,7 +588,7 @@ public abstract class PluginInfo {
                     if (!handler.accept(PluginInfo.this)) {
                         return false;
                     }
-                } catch (@NotNull Throwable throwable) {
+                } catch (Throwable throwable) {
                     throw new RuntimeException("cannot invoke global list's handler to " + handler + " '" + this + "': " + handler, throwable);
                 }
             }

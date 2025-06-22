@@ -58,7 +58,7 @@ final class InitializerFactoryImpl implements InitializerFactory {
                 constructor.setAccessible(true);
 
                 return constructor.newInstance();
-            } catch (@NotNull InvocationTargetException e) {
+            } catch (InvocationTargetException e) {
                 throw new RuntimeException("cannot execute plugin loader's constructor: " + reference, e);
             } catch (NoSuchMethodException e) {
                 throw new RuntimeException("cannot find plugin loader's empty declared constructor: " + reference, e);

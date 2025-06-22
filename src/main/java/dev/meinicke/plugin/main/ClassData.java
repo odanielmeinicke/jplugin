@@ -15,19 +15,15 @@ import org.objectweb.asm.Opcodes;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 final class ClassData implements Closeable {
 
     private final @NotNull String name;
-    private final @NotNull ClassLoader classLoader;
-
     private final @NotNull InputStream inputStream;
 
-    public ClassData(@NotNull String name, @NotNull ClassLoader classLoader, @NotNull InputStream inputStream) {
+    public ClassData(@NotNull String name, @NotNull InputStream inputStream) {
         this.name = name;
-        this.classLoader = classLoader;
         this.inputStream = inputStream;
     }
 
@@ -36,23 +32,20 @@ final class ClassData implements Closeable {
     public @NotNull String getName() {
         return name;
     }
-    public @NotNull ClassLoader getClassLoader() {
-        return classLoader;
-    }
     public @NotNull InputStream getInputStream() {
         return inputStream;
     }
 
     // Modules
 
-    public @Nullable Class<?> loadIfPlugin(@NotNull PluginFinderImpl finder) {
+    public @Nullable Class<?> loadIfPlugin(@NotNull ClassLoader classLoader, @NotNull PluginFinderImpl finder) throws ClassNotFoundException {
         try {
             @NotNull Class<?> reference = Class.forName(name, false, classLoader);
 
             if (reference.isAnnotationPresent(Plugin.class) && (finder.getClassLoaders().isEmpty() || finder.getClassLoaders().contains(reference.getClassLoader()))) {
                 return reference;
             }
-        } catch (@NotNull ClassNotFoundException | @NotNull NoClassDefFoundError e) {
+        } catch (ClassNotFoundException | @NotNull NoClassDefFoundError e) {
             double classVersion = Double.parseDouble(System.getProperty("java.class.version"));
 
             int opcodeTemp;
@@ -111,12 +104,10 @@ final class ClassData implements Closeable {
 
                 reader.accept(visitor, ClassReader.EXPAND_FRAMES);
 
-                if (plugin.get() && valid.get()) try {
+                if (plugin.get() && valid.get()) {
                     return classLoader.loadClass(name);
-                } catch (@NotNull ClassNotFoundException ex) {
-                    throw new RuntimeException("cannot load class '" + name + "' from loader: " + classLoader, ex);
                 }
-            } catch (@NotNull IOException ignore) {
+            } catch (IOException ignore) {
             }
         }
 
@@ -126,16 +117,6 @@ final class ClassData implements Closeable {
 
     // Implementations
 
-    @Override
-    public boolean equals(@Nullable Object object) {
-        if (!(object instanceof ClassData)) return false;
-        @NotNull ClassData classData = (ClassData) object;
-        return Objects.equals(getName(), classData.getName()) && Objects.equals(getClassLoader(), classData.getClassLoader());
-    }
-    @Override
-    public int hashCode() {
-        return Objects.hash(getName(), getClassLoader());
-    }
 
     @Override
     public @NotNull String toString() {

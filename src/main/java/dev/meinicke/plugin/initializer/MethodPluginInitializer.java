@@ -201,7 +201,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
                             if (parts.length == 2) {
                                 try {
                                     methodClass = Class.forName(parts[0]);
-                                } catch (@NotNull ClassNotFoundException e) {
+                                } catch (ClassNotFoundException e) {
                                     throw new IllegalStateException("invalid class for initialization method attribute", e);
                                 }
 
@@ -230,7 +230,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
                 try {
                     // First try to retrieve method with the context parameter
                     method = methodClass.getDeclaredMethod(methodName, PluginContext.class);
-                } catch (@NotNull NoSuchMethodException ignore) {
+                } catch (NoSuchMethodException ignore) {
                     // Not found, try to retrieve method without the plugin context parameter
                     method = methodClass.getDeclaredMethod(methodName);
                 }
@@ -252,7 +252,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
 
                 // Mark as running
                 setState(State.RUNNING);
-            } catch (@NotNull Throwable throwable) {
+            } catch (Throwable throwable) {
                 setState(State.FAILED);
                 if (throwable instanceof InvocationTargetException) {
                     if (throwable.getCause() instanceof PluginInitializeException) {
@@ -295,7 +295,7 @@ public final class MethodPluginInitializer implements PluginInitializer {
                             if (parts.length == 2) {
                                 try {
                                     methodClass = Class.forName(parts[0]);
-                                } catch (@NotNull ClassNotFoundException e) {
+                                } catch (ClassNotFoundException e) {
                                     throw new IllegalStateException("invalid class for interruption method attribute", e);
                                 }
 
@@ -344,11 +344,11 @@ public final class MethodPluginInitializer implements PluginInitializer {
                             } else if (getInstance() instanceof Flushable) {
                                 ((Flushable) getInstance()).flush();
                             }
-                        } catch (@NotNull Throwable e) {
+                        } catch (Throwable e) {
                             throw new PluginInterruptException(getReference(), "cannot close/flush plugin instance: " + this, e);
                         }
                     }
-                } catch (@NotNull InvocationTargetException e) {
+                } catch (InvocationTargetException e) {
                     if (e.getCause() instanceof PluginInterruptException) {
                         throw (PluginInterruptException) e.getCause();
                     }
@@ -360,13 +360,13 @@ public final class MethodPluginInitializer implements PluginInitializer {
                         } else if (getInstance() instanceof Flushable) {
                             ((Flushable) getInstance()).flush();
                         }
-                    } catch (@NotNull Throwable ignore) {
+                    } catch (Throwable ignore) {
                         // Does nothing...
                     }
 
                     // Throw interrupt exception
                     throw new PluginInterruptException(getReference(), "cannot invoke interruption method: " + methodName, e);
-                } catch (@NotNull IllegalAccessException e) {
+                } catch (IllegalAccessException e) {
                     throw new PluginInterruptException(getReference(), "cannot access interruption method: " + methodName, e);
                 }
 

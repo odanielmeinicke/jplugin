@@ -128,7 +128,7 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                 // Starting
                 setState(State.STARTING);
                 handle("start", (handler) -> handler.start(this));
-            } catch (@NotNull Throwable throwable) {
+            } catch (Throwable throwable) {
                 setState(State.FAILED);
                 throw new RuntimeException("cannot invoke 'starting' handlers " + getReference().getName(), throwable);
             }
@@ -140,7 +140,7 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                 try {
                     // First try using the constructor with the plugin context parameter
                     constructor = getReference().getDeclaredConstructor(PluginContext.class);
-                } catch (@NotNull NoSuchMethodException ignore) {
+                } catch (NoSuchMethodException ignore) {
                     // try now using the blank constructor.
                     constructor = getReference().getDeclaredConstructor();
                 }
@@ -154,7 +154,7 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                 } else {
                     this.instance = constructor.newInstance(getContext());
                 }
-            } catch (@NotNull Throwable throwable) {
+            } catch (Throwable throwable) {
                 setState(State.FAILED);
 
                 if (throwable instanceof InvocationTargetException) {
@@ -175,7 +175,7 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
             try {
                 // Mark as running
                 setState(State.RUNNING);
-            } catch (@NotNull Throwable throwable) {
+            } catch (Throwable throwable) {
                 setState(State.FAILED);
                 throw new RuntimeException("cannot invoke 'running' handlers " + getReference().getName(), throwable);
             }
@@ -196,7 +196,7 @@ public final class ConstructorPluginInitializer implements PluginInitializer {
                 } else if (getInstance() instanceof Flushable) {
                     ((Flushable) getInstance()).flush();
                 }
-            } catch (@NotNull Throwable e) {
+            } catch (Throwable e) {
                 if (e.getCause() instanceof PluginInterruptException) {
                     throw (PluginInterruptException) e.getCause();
                 }

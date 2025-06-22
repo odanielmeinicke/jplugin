@@ -21,7 +21,6 @@ import org.jetbrains.annotations.Unmodifiable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Modifier;
-import java.net.URL;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -64,12 +63,12 @@ final class PluginLoader {
                 try {
                     caller = Class.forName(element.getClassName());
                     break;
-                } catch (@NotNull ClassNotFoundException ignore1) {
+                } catch (ClassNotFoundException ignore1) {
                     if (!finder.getClassLoaders().isEmpty()) {
                         for (@NotNull ClassLoader loader : finder.getClassLoaders()) try {
                             caller = Class.forName(element.getClassName(), false, loader);
                             break;
-                        } catch (@NotNull ClassNotFoundException ignore2) {
+                        } catch (ClassNotFoundException ignore2) {
                         }
                     }
                 }
@@ -110,8 +109,6 @@ final class PluginLoader {
         @NotNull Consumer<ClassData> consumer = data -> {
             // Variables
             @NotNull String name = data.getName();
-
-            @NotNull ClassLoader classLoader = data.getClassLoader();
             @NotNull InputStream inputStream = data.getInputStream();
 
             // Verify package
@@ -119,19 +116,26 @@ final class PluginLoader {
             if (!getFinder().checkPackageWithin(pkg)) return;
 
             // Load if it's a plugin
-            @Nullable Class<?> reference = data.loadIfPlugin(finder);
-            if (reference != null) references.add(reference);
+            for (@NotNull ClassLoader classLoader : finder.getClassLoaders()) {
+                @Nullable Class<?> reference = null;
+                try {
+                    reference = data.loadIfPlugin(classLoader, finder);
+                    if (reference != null) references.add(reference);
+                } catch (ClassNotFoundException ignore) {
+                }
+            }
         };
 
         // Collect all references
-        if (finder.getClassLoaders().isEmpty()) {
-            @NotNull Class<?> caller = getCallerClass();
-            @NotNull URL url = caller.getProtectionDomain().getCodeSource().getLocation();
-
-            Classes.getAllTypeClassesWithVisitor(url, caller.getClassLoader(), consumer);
-        } else {
-            Classes.getAllTypeClassesWithVisitor(finder.getClassLoaders(), consumer);
-        }
+//        if (finder.getClassLoaders().isEmpty()) {
+//            @NotNull Class<?> caller = getCallerClass();
+//            @NotNull URL url = caller.getProtectionDomain().getCodeSource().getLocation();
+//
+//            Classes.getAllTypeClassesWithVisitor(url, caller.getClassLoader(), consumer);
+//        } else {
+//            Classes.getAllTypeClassesWithVisitor(finder.getClassLoaders(), consumer);
+//        }
+        Classes.consumeAllClasses(consumer);
 
         // Finish
         return references;
@@ -198,7 +202,7 @@ final class PluginLoader {
                                 suppressed = true;
                                 break handlers;
                             }
-                        } catch (@NotNull Throwable throwable) {
+                        } catch (Throwable throwable) {
                             throw new RuntimeException("cannot invoke category's handler to accept '" + category + "': " + handler);
                         }
                     }
@@ -218,7 +222,7 @@ final class PluginLoader {
                         suppressed = true;
                         break;
                     }
-                } catch (@NotNull Throwable throwable) {
+                } catch (Throwable throwable) {
                     throw new RuntimeException("cannot invoke global handler to accept builder '" + builder.getReference() + "': " + handler);
                 }
             }
@@ -318,7 +322,7 @@ final class PluginLoader {
 
             try {
                 plugin = builder.build();
-            } catch (@NotNull Throwable e) {
+            } catch (Throwable e) {
                 throw new PluginInitializeException(reference, "cannot build plugin info of class: " + reference.getName(), e);
             }
 
@@ -374,9 +378,9 @@ final class PluginLoader {
                 if (plugin.isAutoClose()) {
                     loadedPlugins.add(plugin);
                 }
-            } catch (@NotNull PluginInitializeException e) {
+            } catch (PluginInitializeException e) {
                 throw e;
-            } catch (@NotNull Throwable throwable) {
+            } catch (Throwable throwable) {
                 throw new PluginInitializeException(plugin.getReference(), "cannot initialize plugin correctly", throwable);
             }
 
@@ -521,7 +525,7 @@ final class PluginLoader {
 
                 try {
                     info.close();
-                } catch (@NotNull PluginInterruptException e) {
+                } catch (PluginInterruptException e) {
                     throw new RuntimeException(e);
                 }
             }
@@ -541,7 +545,7 @@ final class PluginLoader {
                 if (!handler.accept(builder)) {
                     return true;
                 }
-            } catch (@NotNull Throwable throwable) {
+            } catch (Throwable throwable) {
                 throw new RuntimeException("cannot invoke category's handler to accept '" + category + "': " + handler);
             }
         }
@@ -560,7 +564,7 @@ final class PluginLoader {
                 if (!handler.accept(plugin)) {
                     return true;
                 }
-            } catch (@NotNull Throwable throwable) {
+            } catch (Throwable throwable) {
                 throw new RuntimeException("cannot invoke category's handler to accept '" + category + "': " + handler);
             }
         }
@@ -605,7 +609,7 @@ final class PluginLoader {
 
                 try {
                     info.close();
-                } catch (@NotNull PluginInterruptException e) {
+                } catch (PluginInterruptException e) {
                     throw new RuntimeException(e);
                 }
             }

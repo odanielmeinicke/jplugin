@@ -51,7 +51,7 @@ final class PluginFactoryImpl implements PluginFactory {
             // Verify if library is present at runtime
             try {
                 Class.forName(entry.getKey());
-            } catch (@NotNull ClassNotFoundException ignore) {
+            } catch (ClassNotFoundException ignore) {
                 continue;
             }
 
@@ -65,15 +65,15 @@ final class PluginFactoryImpl implements PluginFactory {
 
                 @NotNull PluginCategory category = constructor.newInstance();
                 setCategory(category);
-            } catch (@NotNull ClassNotFoundException e) {
+            } catch (ClassNotFoundException e) {
                 throw new RuntimeException("cannot find category class", e);
-            } catch (@NotNull NoSuchMethodException e) {
+            } catch (NoSuchMethodException e) {
                 throw new RuntimeException("cannot find category constructor", e);
-            } catch (@NotNull InvocationTargetException e) {
+            } catch (InvocationTargetException e) {
                 throw new RuntimeException("cannot invoke category constructor", e);
-            } catch (@NotNull InstantiationException e) {
+            } catch (InstantiationException e) {
                 throw new RuntimeException("cannot instantiate category", e);
-            } catch (@NotNull IllegalAccessException e) {
+            } catch (IllegalAccessException e) {
                 throw new RuntimeException("cannot access category constructor", e);
             }
         }

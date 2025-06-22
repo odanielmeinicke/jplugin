@@ -1,135 +1,103 @@
 package dev.meinicke.plugin.main;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.JarURLConnection;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.Set;
+import java.lang.module.ModuleFinder;
+import java.lang.module.ModuleReader;
+import java.nio.file.*;
 import java.util.function.Consumer;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
+import java.util.stream.Stream;
 
+/**
+ * Utility to discover all available classes in the current JVM runtime,
+ * including classes in classpath entries (jars and directories) and modules.
+ * Does not use instrumentation.
+ */
 final class Classes {
 
     // Static initializers
 
-    public static void getAllTypeClassesWithVisitor(@NotNull URL url, @NotNull ClassLoader loader, @NotNull Consumer<@NotNull ClassData> consumer) throws IOException {
-        // Classes from URL
-        if (url.getProtocol().equals("jar")) {
-            JarURLConnection jarConnection = (JarURLConnection) url.openConnection();
-            findClassesInJar(jarConnection.getJarFile(), loader, consumer);
-        } else if (url.getProtocol().equals("file")) {
-            // Retrieve file
-            @NotNull File file;
+    /**
+     * Scans the classpath and modules for all .class files and returns their
+     * fully-qualified names (without loading the classes).
+     */
+    public static void consumeAllClasses(@NotNull Consumer<@NotNull ClassData> consumer) throws IOException {
+        // 1. Scan traditional classpath
+        @NotNull String cp = System.getProperty("java.class.path", "");
 
-            try {
-                file = new File(url.toURI());
-            } catch (URISyntaxException e) {
-                file = new File(url.getPath());
-            }
+        if (!cp.isEmpty()) {
+            @NotNull String[] entries = cp.split(File.pathSeparator);
 
-            // List classes
-            if (file.isDirectory()) {
-                findClassesInDirectory(file, "", loader, consumer);
-            } else if (file.getName().endsWith(".jar")) {
-                try (JarFile jar = new JarFile(file)) {
-                    findClassesInJar(jar, loader, consumer);
+            for (String entry : entries) {
+                @NotNull Path path = Paths.get(entry);
+
+                try {
+                    if (Files.isDirectory(path)) {
+                        scanDirectory(path, consumer);
+                    } else if (entry.toLowerCase().endsWith(".jar") && Files.exists(path)) {
+                        scanJar(path, consumer);
+                    }
+                } catch (IOException e) {
+                    System.err.println("[Classes] Failed to scan entry: " + entry + "; " + e.getMessage());
                 }
             }
         }
-    }
-    public static void getAllTypeClassesWithVisitor(@NotNull Set<ClassLoader> classLoaders, @NotNull Consumer<@NotNull ClassData> consumer) throws IOException {
-        @NotNull String home = System.getProperty("java.home");
 
-        // Classes from ClassLoader
-        for (@NotNull ClassLoader classLoader : classLoaders) {
-            @NotNull Set<File> files = new HashSet<>();
+        // 2. Scan modules (Java 9+)
+        ModuleFinder.ofSystem().findAll().forEach(ref -> {
+            try (@NotNull ModuleReader reader = ref.open()) {
+                reader.list().forEach(resource -> {
+                    if (resource.endsWith(".class")) {
+                        // Variables
+                        @NotNull String name = resource.replace('/', '.').substring(0, resource.length() - 6);
 
-            if (classLoader instanceof URLClassLoader) {
-                @NotNull URLClassLoader urlClassLoader = (URLClassLoader) classLoader;
-
-                for (@NotNull URL url : urlClassLoader.getURLs()) {
-                    try {
-                        files.add(new File(url.toURI()));
-                    } catch (@NotNull URISyntaxException | @NotNull IllegalArgumentException e) {
-                        files.add(new File(url.getPath()));
+                        // Start reading
+                        try (@Nullable InputStream stream = reader.open(name).orElse(null)) {
+                            if (stream != null) {
+                                consumer.accept(new ClassData(name, stream));
+                            }
+                        } catch (IOException ignore) {
+                        }
                     }
-                }
-            } else {
-                @NotNull Enumeration<URL> enumeration = classLoader.getResources("");
-
-                while (enumeration.hasMoreElements()) {
-                    @NotNull URL url = enumeration.nextElement();
-
-                    try {
-                        files.add(new File(url.toURI()));
-                    } catch (@NotNull URISyntaxException | @NotNull IllegalArgumentException e) {
-                        files.add(new File(url.getPath()));
-                    }
-                }
+                });
+            } catch (IOException e) {
+                // skip unreadable modules
             }
+        });
+    }
 
-            // Load all classes
-            for (@NotNull File file : files) {
-                @NotNull String path = file.getPath();
+    private static void scanDirectory(@NotNull Path root, @NotNull Consumer<@NotNull ClassData> consumer) throws IOException {
+        try (@NotNull Stream<Path> stream = Files.walk(root)) {
+            stream.filter(p -> p.toString().endsWith(".class"))
+                    .forEach(path -> {
+                        try (@NotNull InputStream input = Files.newInputStream(path)) {
+                            @NotNull String name = toClassName(root, path);
+                            consumer.accept(new ClassData(name, input));
+                        } catch (IOException ignore) {
+                        }
+                    });
+        }
+    }
 
-                if (path.startsWith(home)) {
-                    continue;
-                }
-
-                if (file.isDirectory()) {
-                    findClassesInDirectory(file, "", classLoader, consumer);
-                } else if (file.getName().endsWith(".jar")) {
-                    try (@NotNull JarFile jar = new JarFile(file)) {
-                        findClassesInJar(jar, classLoader, consumer);
-                    }
-                }
+    private static void scanJar(@NotNull Path jarPath, @NotNull Consumer<@NotNull ClassData> consumer) throws IOException {
+        try (@NotNull FileSystem fs = FileSystems.newFileSystem(jarPath, null)) {
+            for (@NotNull Path root : fs.getRootDirectories()) {
+                scanDirectory(root, consumer);
             }
         }
     }
 
-    // Private utilities
+    private static @NotNull String toClassName(@NotNull Path root, @NotNull Path classFile) {
+        // Variables
+        @NotNull Path rel = root.relativize(classFile);
+        @NotNull String s = rel.toString().replace(File.separatorChar, '.').replace("/", ".");
 
-    private static void findClassesInDirectory(@NotNull File directory, @NotNull String packageName, @NotNull ClassLoader loader, @NotNull Consumer<@NotNull ClassData> consumer) throws IOException {
-        // Retrieve directory files
-        @NotNull File[] files = directory.listFiles();
-        if (files == null) files = new File[0];
-        
-        // Read all files
-        for (@NotNull File file : files) {
-            if (file.isDirectory()) {
-                findClassesInDirectory(file, packageName + file.getName() + ".", loader, consumer);
-            } else if (file.getName().endsWith(".class") && !file.getName().toLowerCase().endsWith("module-info.class")) {
-                @NotNull String name = packageName + file.getName().replace(".class", "");
-
-                try (@NotNull InputStream stream = Files.newInputStream(file.toPath())) {
-                    consumer.accept(new ClassData(name, loader, stream));
-                }
-            }
-        }
-    }
-    private static void findClassesInJar(@NotNull JarFile jar, @NotNull ClassLoader loader, @NotNull Consumer<@NotNull ClassData> consumer) throws IOException {
-        @NotNull Enumeration<JarEntry> entries = jar.entries();
-
-        while (entries.hasMoreElements()) {
-            @NotNull JarEntry entry = entries.nextElement();
-
-            if (entry.getName().endsWith(".class") && !entry.getName().toLowerCase().endsWith("module-info.class") && !entry.getName().toLowerCase().endsWith("package-info.class")) {
-                @NotNull String name = entry.getName().replace("/", ".").replace(".class", "");
-
-                try (@NotNull InputStream stream = jar.getInputStream(entry)) {
-                    consumer.accept(new ClassData(name, loader, stream));
-                }
-            }
-        }
+        // Finish
+        return s.substring(0, s.length() - 6);
     }
 
     // Object
