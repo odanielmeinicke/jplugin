@@ -38,7 +38,7 @@ final class ClassData implements Closeable {
 
     // Modules
 
-    public @Nullable Class<?> loadIfPlugin(@NotNull ClassLoader classLoader, @NotNull PluginFinderImpl finder) throws ClassNotFoundException {
+    public @Nullable Class<?> loadIfPlugin(@NotNull ClassLoader classLoader, @NotNull PluginFinderImpl finder) {
         try {
             @NotNull Class<?> reference = Class.forName(name, false, classLoader);
 
@@ -104,8 +104,10 @@ final class ClassData implements Closeable {
 
                 reader.accept(visitor, ClassReader.EXPAND_FRAMES);
 
-                if (plugin.get() && valid.get()) {
+                if (plugin.get() && valid.get()) try {
                     return classLoader.loadClass(name);
+                } catch (@NotNull ClassNotFoundException ignore) {
+                    return null;
                 }
             } catch (IOException ignore) {
             }

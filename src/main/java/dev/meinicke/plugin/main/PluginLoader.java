@@ -116,25 +116,20 @@ final class PluginLoader {
             if (!getFinder().checkPackageWithin(pkg)) return;
 
             // Load if it's a plugin
-            for (@NotNull ClassLoader classLoader : finder.getClassLoaders()) {
-                @Nullable Class<?> reference = null;
-                try {
-                    reference = data.loadIfPlugin(classLoader, finder);
-                    if (reference != null) references.add(reference);
-                } catch (ClassNotFoundException ignore) {
+            @NotNull Set<ClassLoader> classLoaders = new LinkedHashSet<>(finder.getClassLoaders());
+            classLoaders.add(getCallerClass().getClassLoader() != null ? getCallerClass().getClassLoader() : Thread.currentThread().getContextClassLoader());
+
+            for (@NotNull ClassLoader classLoader : classLoaders) {
+                @Nullable Class<?> reference = data.loadIfPlugin(classLoader, finder);
+
+                if (reference != null) {
+                    references.add(reference);
+                    break;
                 }
             }
         };
 
         // Collect all references
-//        if (finder.getClassLoaders().isEmpty()) {
-//            @NotNull Class<?> caller = getCallerClass();
-//            @NotNull URL url = caller.getProtectionDomain().getCodeSource().getLocation();
-//
-//            Classes.getAllTypeClassesWithVisitor(url, caller.getClassLoader(), consumer);
-//        } else {
-//            Classes.getAllTypeClassesWithVisitor(finder.getClassLoaders(), consumer);
-//        }
         Classes.consumeAllClasses(consumer);
 
         // Finish
