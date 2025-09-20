@@ -307,7 +307,9 @@ public interface PluginFactory extends Iterable<PluginInfo> {
      * resources are released.
      *
      * @throws PluginInterruptException If an error occurs during the interruption process.
+     * @deprecated use manual interruption one-by-one for better exception handling.
      */
+    @Deprecated
     void interruptAll() throws PluginInterruptException;
 
     /**

@@ -5,7 +5,6 @@ import dev.meinicke.plugin.category.PluginCategory;
 import dev.meinicke.plugin.exception.PluginInitializeException;
 import dev.meinicke.plugin.initializer.PluginInitializer;
 import dev.meinicke.plugin.metadata.Metadata;
-import dev.meinicke.plugin.metadata.type.MetadataType;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,8 +24,6 @@ import java.util.function.Predicate;
  *   <li>Check if a given {@link PluginInfo} or plugin class matches the defined criteria using {@link #matches(PluginInfo)}
  *       or {@link #matches(Class)}.</li>
  *   <li>Retrieve an array of {@link PluginInfo} objects representing the plugins that satisfy the filters with {@link #plugins()}.</li>
- *   <li>Retrieve an array of {@code Class<?>} objects corresponding to the matching plugins, even loading unloaded classes if necessary,
- *       via the {@link #classes()} method.</li>
  *   <li>Load the plugins into the system using {@link #load()} or {@link #load(Predicate)}, where additional filtering on the class level
  *       can be applied.</li>
  * </ul>
@@ -297,44 +294,15 @@ public interface PluginFinder {
      * This method is a convenience shortcut for inserting entries into the metadata container
      * retrieved via {@link #getMetadata()}. The inserted key-value pair will be automatically
      * applied to all plugins that are loaded using this {@code PluginFinder}.
-     * <p>
-     * This operation does not assign an explicit type to the metadata key. If type safety
-     * is important, consider using the overloaded method that accepts a {@link MetadataType}.
      *
      * @param key   the case-insensitive metadata key
      * @param value the metadata value to associate with the key
      * @return this finder instance for method chaining
      *
      * @see #getMetadata()
-     * @see #metadata(String, MetadataType, Object)
      * @since 1.1.7
      */
     default @NotNull PluginFinder metadata(@NotNull String key, @NotNull Object value) {
-        getMetadata().put(key, value);
-        return this;
-    }/**
-     * Sets a typed metadata entry for the specified key, type, and value.
-     * <p>
-     * This method allows you to specify a {@link MetadataType} alongside the value,
-     * ensuring type-safe retrieval and use of the metadata later on. The key, type,
-     * and value are all stored in the internal metadata container, and this metadata
-     * will be directly applied to all plugins loaded through this {@code PluginFinder}.
-     * <p>
-     * Using a typed entry helps enforce value constraints and avoids class cast issues
-     * when accessing metadata downstream.
-     *
-     * @param key   the case-insensitive metadata key
-     * @param type  the metadata type used to enforce type safety
-     * @param value the value to associate with the key and type
-     * @param <T>   the type of the metadata value
-     * @return this finder instance for method chaining
-     *
-     * @see #getMetadata()
-     * @see MetadataType
-     * @since 1.1.7
-     */
-    default <T> @NotNull PluginFinder metadata(@NotNull String key, @NotNull MetadataType<T> type, @NotNull T value) {
-        getMetadata().setType(key, type);
         getMetadata().put(key, value);
         return this;
     }

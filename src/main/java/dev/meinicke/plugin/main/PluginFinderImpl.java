@@ -43,8 +43,6 @@ final class PluginFinderImpl implements PluginFinder {
 
     private volatile boolean shutdownHook = true;
 
-    private final @NotNull PluginLoader loader = new PluginLoader(this);
-
     public PluginFinderImpl(@NotNull PluginFactoryImpl factory) {
         this.factory = factory;
     }
@@ -566,14 +564,17 @@ final class PluginFinderImpl implements PluginFinder {
 
     @Override
     public @NotNull Class<?> @NotNull [] classes() throws IOException {
-        return loader.getClasses().toArray(new Class[0]);
+        return new PluginLoader(this, (builder) -> true).getClasses().toArray(new Class[0]);
     }
 
     // Load
 
     @Override
     public @NotNull PluginInfo @NotNull [] load(@NotNull Predicate<Class<?>> predicate) throws PluginInitializeException, IOException {
-        return loader.load(predicate).toArray(new PluginInfo[0]);
+        @NotNull PluginLoader loader = new PluginLoader(this, predicate);
+        loader.load();
+
+        return loader.getPlugins().toArray(new PluginInfo[0]);
     }
 
     // Utilities

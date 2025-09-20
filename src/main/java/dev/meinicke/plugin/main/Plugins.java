@@ -239,7 +239,9 @@ public final class Plugins {
      * Interrupts all plugins managed by the PluginFactory.
      *
      * @throws PluginInterruptException If an error occurs during the interruption process.
+     * @deprecated use manual interruption one-by-one for better exception handling.
      */
+    @Deprecated
     public static void interruptAll() throws PluginInterruptException {
         getPluginFactory().interruptAll();
     }

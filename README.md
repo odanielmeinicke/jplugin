@@ -159,14 +159,14 @@ import dev.meinicke.plugin.initializer.MethodPluginInitializer;
 @Initializer(type = MethodPluginInitializer.class)
 @Plugin(name = "LibraryDependentPlugin", description = "A plugin that uses SomeLibrary.")
 public class LibraryDependentPlugin {
-   public static void initialize() {
-      // This plugin only will be initialized when SomeLibrary has initialized.
-      SomeLibrary.doSomething();
-   }
+    public static void initialize() {
+        // This plugin only will be initialized when SomeLibrary has initialized.
+        SomeLibrary.doSomething();
+    }
 
-   public static void interrupt() {
-      // This plugin will be interrupted BEFORE the dependencies
-   }
+    public static void interrupt() {
+        // This plugin will be interrupted BEFORE the dependencies
+    }
 }
 ```
 
@@ -349,15 +349,15 @@ import dev.meinicke.plugin.initializer.ConstructorPluginInitializer;
 @Plugin(name = "Authentication Page", description = "The authentication page that allow users to access the dashboard at the website.")
 final class Authentication extends Page {
 
-   // The constructor must have no parameters, and could have any visilibity.
-   private Authentication() {
-      super("/authentication"); // The page path
-   }
+    // The constructor must have no parameters, and could have any visilibity.
+    private Authentication() {
+        super("/authentication"); // The page path
+    }
 
-   @Override
-   public void execute(HttpClient client, HttpData data) {
-      // Do stuff here
-   }
+    @Override
+    public void execute(HttpClient client, HttpData data) {
+        // Do stuff here
+    }
 
 }
 ```
